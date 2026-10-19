@@ -14,11 +14,26 @@ Windows Developer Mode включён пользователем. Python 3.12.14
 | Backend pytest | 17 passed: серверное время, play/pause/seek/next, rejoin, concurrency, retry, права, transfer, leave, votes, validation, HTTP ASGI |
 | Backend ruff | All checks passed |
 | Flutter analyzer | No issues found |
-| Flutter unit/widget | SQLite restart/persistence, idempotent import, safe deletion, playlist CRUD, queue/shuffle/repeat, clock estimator/drift correction, UI 1440×960 и 390×844 |
+| Flutter unit/widget | 8 passed: SQLite restart/persistence, idempotent import, safe deletion, playlist CRUD, queue/shuffle/repeat, clock estimator/drift correction, UI 1440×960 и 390×844, полный цикл Cosmic |
 | Цикл Cosmic | Реальные Flutter кадры t=0 и t=90 совпадают; порог: менее 0.001% цветовых каналов отличаются более чем на 1/255 |
-| Windows native integration | Passed: настоящий libmpv, WAV decode/duration, движение позиции, pause, seek, manual next, repeat-one, auto-next, конец очереди, история после 10 секунд реального слушания, missing-file/retry |
+| Windows native integration | 1 passed (повторно после оптимизации): настоящий libmpv, WAV decode/duration, движение позиции, pause, seek, manual next, repeat-one, auto-next, конец очереди, история после 10 секунд реального слушания, missing-file/retry |
 | Анимация native UI | Последовательные кадры отличаются; reduced motion даёт одинаковые кадры через секунду |
 | Windows release | Нативная x64 release-сборка, не web/PWA |
+
+## Финальный пакет 0.1.1
+
+Release exe имеет ProductVersion/FileVersion `0.1.1+2`. Portable-папка и ZIP:
+`dist/OPTIMUM-0.1.1-windows-x64`. Архив снабжён SHA-256:
+`fc2c6c78c74222ffc986aee78ac864c4f3d01fbbeeff65af216b4ac8e745082f`.
+Приложение запущено из packaged folder; создало настоящую базу в
+`%APPDATA%/app.optimum/OPTIMUM/library.db` и продолжает работать.
+
+Короткий замер процесса 0.1.1: рабочий набор около 112 МБ, пик 118 МБ;
+за 3.06 с — 0.5% одного CPU-ядра. Фокус окна не контролировался, поэтому это
+smoke-замер процесса, а не benchmark активной анимации и не доказательство FPS.
+JSON сохранён в `artifacts/release-idle-metrics-0.1.1.json`.
+Туманности кэшируются в двух 256×256 текстурах; фон имеет отдельный clock 30 Гц,
+проверенный бесшовный период 90 с. Неактивное окно не продолжает анимацию.
 
 Native integration после compatibility patch не выводит прежние ошибки
 `property not found ... osc` и `lavf: Failed to create file cache`.

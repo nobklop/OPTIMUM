@@ -29,3 +29,10 @@ Flutter doctor подтвердил Visual Studio Build Tools 2022 17.14.42 и W
 native test проверяет движение и reduced motion. Старое GIF-превью было фрагментом
 с заметным стыком; заменено полным циклом (в превью ускорение явно документировано).
 Native тест дополнен реальными repeat/auto-next/end-of-queue/history сценариями — passed.
+
+Первый проверенный этап сохранён commit `607ebe6` (0.1.0).
+Финальная версия 0.1.1: кэшированные туманности, фон 30 Гц, lifecycle-aware startup;
+8 Flutter tests, analyzer и native Windows integration повторно прошли.
+Portable ZIP создан, SHA-256 записан; приложение открыто из dist/OPTIMUM-0.1.1-windows-x64.
+Backend 17 tests/ruff passed; после этого backend не менялся.
+Следующий большой этап: продолжить ROADMAP, приоритет — auth/persistence и настоящий WSS Together.

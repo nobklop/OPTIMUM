@@ -1,5 +1,8 @@
 # OPTIMUM
 
+Текущая Windows-сборка: **0.1.1**. Локальный прототип; проверенный portable-пакет
+находится в `dist/OPTIMUM-0.1.1-windows-x64/`, архив — рядом.
+
 Музыкальное пространство с Cosmic-интерфейсом. Первый локальный прототип:
 Flutter + SQLite + just_audio, с отдельной основой FastAPI и Together domain.
 Точная матрица проверок и ограничения: [VERIFICATION](docs/VERIFICATION.md).

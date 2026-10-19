@@ -989,7 +989,7 @@ class _WorkspaceState extends State<Workspace> {
           ),
           const SizedBox(height: 18),
           const Text(
-            'OPTIMUM 0.1.0 · первый рабочий прототип',
+            'OPTIMUM 0.1.1 · первый рабочий прототип',
             style: TextStyle(color: muted, fontSize: 12),
           ),
           const SizedBox(height: 8),
@@ -1001,7 +1001,7 @@ class _WorkspaceState extends State<Workspace> {
             onPressed: () => showLicensePage(
               context: context,
               applicationName: 'OPTIMUM',
-              applicationVersion: '0.1.0',
+              applicationVersion: '0.1.1',
             ),
             child: const Text('Лицензии компонентов'),
           ),

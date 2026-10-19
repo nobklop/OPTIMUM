@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 const ink = Color(0xFF050507);
@@ -18,6 +20,8 @@ class _CosmosState extends State<Cosmos>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   bool _active = true;
   final pointer = ValueNotifier<Offset>(Offset.zero);
+  final frameClock = ValueNotifier<double>(0);
+  int _frame = -1;
   late final AnimationController animation = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 90),
@@ -25,8 +29,17 @@ class _CosmosState extends State<Cosmos>
   @override
   void initState() {
     super.initState();
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _active = lifecycle == null || lifecycle == AppLifecycleState.resumed;
     WidgetsBinding.instance.addObserver(this);
-    if (!widget.reduced) animation.repeat();
+    animation.addListener(() {
+      final frame = (animation.value * 90 * 30).floor();
+      if (frame != _frame) {
+        _frame = frame;
+        frameClock.value = animation.value;
+      }
+    });
+    if (!widget.reduced && _active) animation.repeat();
   }
 
   @override
@@ -45,6 +58,7 @@ class _CosmosState extends State<Cosmos>
     WidgetsBinding.instance.removeObserver(this);
     animation.dispose();
     pointer.dispose();
+    frameClock.dispose();
     super.dispose();
   }
 
@@ -60,7 +74,7 @@ class _CosmosState extends State<Cosmos>
 
   @override
   Widget build(BuildContext context) => CosmicMotion(
-    clock: animation,
+    clock: frameClock,
     child: MouseRegion(
       onHover: (event) {
         if (widget.reduced) return;
@@ -77,7 +91,7 @@ class _CosmosState extends State<Cosmos>
         children: [
           Positioned.fill(
             child: RepaintBoundary(
-              child: CustomPaint(painter: StarPainter(animation, pointer)),
+              child: CustomPaint(painter: StarPainter(frameClock, pointer)),
             ),
           ),
           widget.child,
@@ -88,16 +102,16 @@ class _CosmosState extends State<Cosmos>
 }
 
 class CosmicMotion extends InheritedWidget {
-  final Animation<double> clock;
+  final ValueListenable<double> clock;
   const CosmicMotion({super.key, required this.clock, required super.child});
-  static Animation<double>? of(BuildContext context) =>
+  static ValueListenable<double>? of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<CosmicMotion>()?.clock;
   @override
   bool updateShouldNotify(CosmicMotion oldWidget) => clock != oldWidget.clock;
 }
 
 class StarPainter extends CustomPainter {
-  final Animation<double> animation;
+  final ValueListenable<double> animation;
   final ValueNotifier<Offset> pointer;
   late final List<Offset> stars = List.generate(
     136,
@@ -105,35 +119,47 @@ class StarPainter extends CustomPainter {
   );
   StarPainter(this.animation, this.pointer)
     : super(repaint: Listenable.merge([animation, pointer]));
+  static ui.Image cloud(Color color, double opacity) {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    const center = Offset(128, 128);
+    canvas.drawCircle(
+      center,
+      128,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            color.withValues(alpha: opacity),
+            color.withValues(alpha: opacity * .25),
+            Colors.transparent,
+          ],
+          stops: const [0, .48, 1],
+        ).createShader(const Rect.fromLTWH(0, 0, 256, 256)),
+    );
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(256, 256);
+    picture.dispose();
+    return image;
+  }
+
+  static final ui.Image _cloudA = cloud(const Color(0xFF77778F), .16);
+  static final ui.Image _cloudB = cloud(const Color(0xFF56566B), .12);
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint();
     final phase = animation.value * pi * 2;
     // Elliptical shader clouds give depth without full-screen blur passes or textures.
-    void nebula(
-      Offset center,
-      double width,
-      double height,
-      Color color,
-      double opacity,
-    ) {
+    void nebula(Offset center, double width, double height, ui.Image image) {
       canvas.save();
       canvas.translate(center.dx, center.dy);
       canvas.rotate(-.38 + sin(phase) * .08);
       canvas.scale(1, height / width);
       final rect = Rect.fromCircle(center: Offset.zero, radius: width);
-      canvas.drawCircle(
-        Offset.zero,
-        width,
-        Paint()
-          ..shader = RadialGradient(
-            colors: [
-              color.withValues(alpha: opacity),
-              color.withValues(alpha: opacity * .25),
-              Colors.transparent,
-            ],
-            stops: const [0, .48, 1],
-          ).createShader(rect),
+      canvas.drawImageRect(
+        image,
+        const Rect.fromLTWH(0, 0, 256, 256),
+        rect,
+        Paint()..filterQuality = FilterQuality.low,
       );
       canvas.restore();
     }
@@ -145,8 +171,7 @@ class StarPainter extends CustomPainter {
       ),
       size.width * .58,
       size.height * .39,
-      const Color(0xFF77778F),
-      .16,
+      _cloudA,
     );
     nebula(
       Offset(
@@ -155,8 +180,7 @@ class StarPainter extends CustomPainter {
       ),
       size.width * .48,
       size.height * .28,
-      const Color(0xFF56566B),
-      .12,
+      _cloudB,
     );
     // A distant orbital arc moves below the stars; all colors remain nearly neutral.
     canvas.save();
@@ -243,7 +267,7 @@ class OrbitArt extends StatelessWidget {
 
 class OrbitPainter extends CustomPainter {
   final int variant;
-  final Animation<double>? animation;
+  final ValueListenable<double>? animation;
   OrbitPainter(this.variant, [this.animation]) : super(repaint: animation);
   @override
   void paint(Canvas canvas, Size size) {
