@@ -1,6 +1,7 @@
 library just_audio_media_kit;
 
 import 'dart:async';
+import 'package:flutter/services.dart' show PlatformException;
 
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:just_audio_platform_interface/just_audio_platform_interface.dart';
@@ -155,10 +156,13 @@ class MediaKitPlayer extends AudioPlayerPlatform {
       }),
       _player.stream.error.listen((error) {
         final errorUri = RegExp(r'Failed to open (.*)\.').firstMatch(error)?[1];
-        if (errorUri == null || errorUri == _currentMedia?.uri) {
+        if (_loadCompleter?.isCompleted == false || errorUri == null || errorUri == _currentMedia?.uri) {
           _processingState = ProcessingStateMessage.idle;
           _errorCode = kErrorCode;
           _errorMessage = error;
+          if (_loadCompleter?.isCompleted == false) {
+            _loadCompleter!.completeError(PlatformException(code: 'audio_load', message: error));
+          }
           _updatePlaybackEvent();
         }
         _logger.severe('ERROR OCCURRED: $error');
@@ -347,6 +351,9 @@ class MediaKitPlayer extends AudioPlayerPlatform {
       } else {
         _setPosition = nativePosition;
       }
+      // Events emitted while the native seek was pending may have overwritten
+      // _position with the old value. Publish the requested position on completion.
+      _position = position;
     } else {
       _position = Duration.zero;
     }

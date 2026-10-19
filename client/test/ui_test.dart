@@ -81,6 +81,8 @@ void main() {
           await tester.tap(find.text('Настройки').first);
           await tester.pumpAndSettle();
           expect(find.text('Уменьшить движение'), findsOneWidget);
+          expect(find.text('Сохранить копию'), findsOneWidget);
+          expect(find.text('Восстановить из JSON'), findsOneWidget);
           expect(tester.takeException(), isNull);
         } finally {
           await tester.pumpWidget(const SizedBox());

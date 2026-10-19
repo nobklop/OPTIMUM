@@ -80,6 +80,27 @@ void main() {
           p.join(artifacts.path, 'windows-library.png'),
         ).writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
+        await tester.tap(find.text('Настройки').first);
+        await tester.pumpAndSettle();
+        expect(find.text('Резервная копия библиотеки'), findsOneWidget);
+        expect(find.text('Сохранить копию'), findsOneWidget);
+        expect(find.text('Восстановить из JSON'), findsOneWidget);
+        final settingsImage =
+            await (boundary.currentContext!.findRenderObject()
+                    as RenderRepaintBoundary)
+                .toImage();
+        final settingsBytes = await settingsImage.toByteData(
+          format: ui.ImageByteFormat.png,
+        );
+        await File(
+          p.join(artifacts.path, 'windows-backup-settings.png'),
+        ).writeAsBytes(settingsBytes!.buffer.asUint8List());
+        settingsImage.dispose();
+        // Queue controls keep the user's paused state in either direction.
+        await player.next();
+        expect(player.playing, false);
+        await player.previous();
+        expect(player.playing, false);
         expect(
           await store.recent(),
           isEmpty,
@@ -107,6 +128,11 @@ void main() {
         await tester.tap(find.text('Главная').first);
         await model.idle;
         await model.motion(false);
+        // Desktop focus may move to the editor or an authentication page during
+        // this run. Drive the lifecycle explicitly for this rendering assertion.
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
         await tester.pump(const Duration(milliseconds: 400));
         final frames = Directory(p.join(artifacts.path, 'cosmic-frames'));
         await frames.create(recursive: true);

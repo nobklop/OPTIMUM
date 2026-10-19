@@ -36,3 +36,28 @@ Native тест дополнен реальными repeat/auto-next/end-of-queu
 Portable ZIP создан, SHA-256 записан; приложение открыто из dist/OPTIMUM-0.1.1-windows-x64.
 Backend 17 tests/ruff passed; после этого backend не менялся.
 Следующий большой этап: продолжить ROADMAP, приоритет — auth/persistence и настоящий WSS Together.
+
+## Этап 0.2.0
+
+Пользователь попросил продолжать до лимитов и сохранять промежуточные версии.
+Remote origin: https://github.com/nobklop/OPTIMUM.git (изначально пуст).
+Git Credential Manager авторизован пользователем через GitHub device flow;
+main/v0.1.0/v0.1.1 успешно отправлены, remote refs проверены. Секреты не записаны.
+
+Добавлены metadata-only JSON backups: data/backup.dart, AppModel и Settings UI.
+SQLite v2: стабильные ключи плейлистов и VACUUM INTO перед v1-миграцией.
+Тесты подтверждают roundtrip, одноимённые плейлисты, идемпотентность, сохранение
+текущих данных, rollback при ошибке, целостную автоматическую v1-копию.
+История сортируется по времени, поэтому старый backup не меняет свежий порядок.
+
+Windows codec matrix прошла WAV/MP3/FLAC/OGG/M4A и damaged WAV→recovery.
+Патч adapter завершает ошибочную загрузку и устраняет stale seek position;
+controller ограничивает load 15 сек, next/previous сохраняют паузу.
+11 unit/widget tests, analyzer и повторный native Windows UI/audio test прошли.
+Native rendering test явно задаёт active lifecycle, потому что переход на GitHub
+ожидаемо останавливал фон при потере фокуса; сама анимация не сломана.
+Новый native кадр: artifacts/windows-backup-settings.png.
+Release 0.2.0+3 собран, portable ZIP и SHA-256 сохранены в dist, предыдущие пакеты
+оставлены. Следующий локальный этап: сохранять очередь/позицию/громкость между
+запусками без autoplay, затем улучшить импорт больших папок. Together остаётся
+главным большим сетевым этапом; для него ещё нужны Supabase/JWT/PostgreSQL/WSS.

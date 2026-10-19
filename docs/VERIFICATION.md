@@ -14,13 +14,21 @@ Windows Developer Mode включён пользователем. Python 3.12.14
 | Backend pytest | 17 passed: серверное время, play/pause/seek/next, rejoin, concurrency, retry, права, transfer, leave, votes, validation, HTTP ASGI |
 | Backend ruff | All checks passed |
 | Flutter analyzer | No issues found |
-| Flutter unit/widget | 8 passed: SQLite restart/persistence, idempotent import, safe deletion, playlist CRUD, queue/shuffle/repeat, clock estimator/drift correction, UI 1440×960 и 390×844, полный цикл Cosmic |
+| Flutter unit/widget | 11 passed: прежние 8 проверок и 3 проверки JSON backup/restore, transaction rollback, миграции v1→v2 с целостной копией |
 | Цикл Cosmic | Реальные Flutter кадры t=0 и t=90 совпадают; порог: менее 0.001% цветовых каналов отличаются более чем на 1/255 |
-| Windows native integration | 1 passed (повторно после оптимизации): настоящий libmpv, WAV decode/duration, движение позиции, pause, seek, manual next, repeat-one, auto-next, конец очереди, история после 10 секунд реального слушания, missing-file/retry |
-| Анимация native UI | Последовательные кадры отличаются; reduced motion даёт одинаковые кадры через секунду |
+| Windows native integration | 1 passed повторно для 0.2.0: настоящий libmpv, WAV decode/duration, pause, seek, next/previous в паузе, repeat-one, auto-next, конец очереди, история после 10 секунд, missing-file/retry, новые настройки |
+| Windows codec matrix | 1 passed: WAV/MP3/FLAC/OGG/M4A (AAC), русские пути, теги, duration/play/pause/seek; повреждённый WAV даёт ошибку, затем валидный MP3 играет |
+| Анимация native UI | В активном lifecycle последовательные кадры отличаются; reduced motion даёт одинаковые кадры через секунду. В 0.2 тест явно задаёт resumed, чтобы переключение на редактор/GitHub не замораживало проверку |
 | Windows release | Нативная x64 release-сборка, не web/PWA |
 
-## Финальный пакет 0.1.1
+## Пакет 0.2.0
+
+Release собран успешно; ProductVersion/FileVersion `0.2.0+3`. Portable:
+`dist/OPTIMUM-0.2.0-windows-x64/optimum.exe`, ZIP рядом; SHA-256:
+`75571c6e1f1cfd5dd4c4a5627d3aa1fe228bb6d54262b4b4b890a29f6a3b3fde`.
+Старые пакеты сохранены. Backend после 17 passed/ruff не изменялся.
+
+## Пакет 0.1.1 (сохранён)
 
 Release exe имеет ProductVersion/FileVersion `0.1.1+2`. Portable-папка и ZIP:
 `dist/OPTIMUM-0.1.1-windows-x64`. Архив снабжён SHA-256:
@@ -46,6 +54,9 @@ media_kit_libs_windows_audio; сборка успешна. Логи не фил�
   не дизайнерские картинки. Layout tests используют IdlePlayback test double.
 - `artifacts/windows-library.png`, `windows-cosmic.png`: настоящие кадры нативного
   Windows integration test, с реальным аудиоплеером.
+- `artifacts/windows-backup-settings.png`: новые настройки резервного копирования,
+  настоящий Windows integration test. Выбор файлов в системных диалогах вручную
+  не автоматизировался; чтение/запись JSON и транзакции проверены отдельно.
 - `artifacts/cosmic-frames/`: короткий фрагмент нативной анимации.
 - `artifacts/cosmic-loop-frames/`: полный цикл тех же Flutter painters в 120 фазах.
 - `artifacts/optimum-cosmic.gif`: полный цикл, ускоренный с 90 до 9.6 секунд для
@@ -57,9 +68,8 @@ os error 3`, включая попытку reset/retry. Ручная автом�
 
 ## Ограничения
 
-- MP3/FLAC/OGG поддерживаются выбранным backend, но собственная codec matrix на
-  этой машине пока подтверждена только для PCM WAV. Повреждённые codec fixtures,
-  большие каталоги, многочасовое воспроизведение и выходы Bluetooth ещё не проверены.
+- Codec matrix подтверждена на коротких оригинальных fixtures. Большие каталоги,
+  многочасовое воспроизведение, остальные варианты кодирования и Bluetooth не проверены.
 - Измерения рассинхронизации двух реальных аудиоустройств отсутствуют. Domain/clock
   tests не равны готовому Together: WSS, Supabase JWT, PostgreSQL/RLS пока не подключены.
 - Android SDK отсутствует; Android/iOS сборки, scoped storage, фон и lock-screen
@@ -67,5 +77,5 @@ os error 3`, включая попытку reset/retry. Ручная автом�
 - Нет cloud backup, экспорта аккаунта, автоматических подборок и платформенных интеграций.
 - Нет release-профиля батареи/GPU и долговременного memory soak. Нельзя заявлять
   целевую частоту кадров или мобильное энергопотребление на основе desktop теста.
-- Публичная публикация, signing и installer не выполнялись. Native dependency
+- Исходники опубликованы в github.com/nobklop/OPTIMUM; signing и installer отсутствуют. Native dependency
   notices и условия libmpv/FFmpeg требуют завершения проверки перед распространением.

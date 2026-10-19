@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data' show BytesBuilder;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'data/library.dart';
+import 'data/backup.dart';
 
 class AppModel extends ChangeNotifier {
   final LibraryStore store;
@@ -99,6 +102,44 @@ class AppModel extends ChangeNotifier {
   Future<void> addStudies() => task(() async {
     await store.addStudies();
     message = 'Три авторских звуковых этюда добавлены в библиотеку';
+  });
+  Future<void> exportBackup() => task(() async {
+    final content = await LibraryBackup(store).exportJson();
+    final bytes = Uint8List.fromList(utf8.encode(content));
+    if (bytes.length > LibraryBackup.maxBytes) {
+      throw const FormatException('Резервная копия больше 32 МБ');
+    }
+    final result = await FilePicker.saveFile(
+      dialogTitle: 'Сохранить библиотеку OPTIMUM',
+      fileName:
+          'OPTIMUM-library-${DateTime.now().toIso8601String().substring(0, 10)}.json',
+      bytes: bytes,
+      mimeType: 'application/json',
+    );
+    if (result != null) message = 'Резервная копия библиотеки сохранена';
+  });
+  Future<void> restoreBackup() => task(() async {
+    final file = await FilePicker.pickFile(
+      dialogTitle: 'Восстановить библиотеку OPTIMUM',
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+    );
+    if (file == null) return;
+    if ((await file.length() ?? 0) > LibraryBackup.maxBytes) {
+      throw const FormatException('Резервная копия больше 32 МБ');
+    }
+    final bytes = BytesBuilder(copy: false);
+    await for (final chunk in file.readAsByteStream()) {
+      if (bytes.length + chunk.length > LibraryBackup.maxBytes) {
+        throw const FormatException('Резервная копия больше 32 МБ');
+      }
+      bytes.add(chunk);
+    }
+    final result = await LibraryBackup(
+      store,
+    ).restoreJson(utf8.decode(bytes.takeBytes()));
+    message =
+        'Библиотека объединена. Добавлено треков: ${result.tracksAdded}, плейлистов: ${result.playlistsAdded}';
   });
   Future<void> like(Track track) =>
       task(() => store.like(track.id, !track.liked));

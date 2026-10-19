@@ -11,5 +11,11 @@ the configured bounded memory buffer. This avoids the observed Windows
 `lavf: Failed to create file cache` error. Initialization errors propagate.
 Logs are not filtered or silenced. Revalidate/remove this patch on upstream updates.
 
+Native decoder failures complete a pending load with `PlatformException` instead
+of leaving its Future pending. Seeking republishes the requested position after
+the native seek returns, preventing a stale event during the await from resetting
+the displayed position. These cases are covered by the Windows codec integration
+test, including a deliberately damaged WAV and recovery to a valid MP3.
+
 Validation: real Windows integration test must decode, pause, seek, switch tracks
 and report missing-file errors, with neither of these two mpv errors in the log.

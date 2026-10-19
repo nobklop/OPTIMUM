@@ -95,9 +95,15 @@ class LibraryStore {
     }
     final db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys=ON');
+        if (await db.getVersion() == 1 && path != ':memory:') {
+          // A consistent SQLite snapshot, even if another app instance is open.
+          await db.execute('VACUUM INTO ?', [
+            '$path.before-v2-${DateTime.now().toUtc().microsecondsSinceEpoch}.db',
+          ]);
+        }
       },
       onCreate: (db, version) async {
         await db.execute('''CREATE TABLE tracks (
@@ -106,7 +112,7 @@ class LibraryStore {
           duration_ms INTEGER NOT NULL DEFAULT 0, liked INTEGER NOT NULL DEFAULT 0,
           imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)''');
         await db.execute(
-          'CREATE TABLE playlists (id INTEGER PRIMARY KEY, name TEXT NOT NULL)',
+          'CREATE TABLE playlists (id INTEGER PRIMARY KEY, name TEXT NOT NULL, backup_key TEXT)',
         );
         await db.execute('''CREATE TABLE playlist_tracks (
           playlist_id INTEGER NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
@@ -119,9 +125,30 @@ class LibraryStore {
         await db.execute(
           'CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
         );
+        await _playlistKeys(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE playlists ADD COLUMN backup_key TEXT');
+          await _playlistKeys(db);
+        }
       },
     );
     return LibraryStore(db);
+  }
+
+  static Future<void> _playlistKeys(DatabaseExecutor db) async {
+    await db.execute(
+      'UPDATE playlists SET backup_key=lower(hex(randomblob(16))) WHERE backup_key IS NULL',
+    );
+    await db.execute(
+      'CREATE UNIQUE INDEX playlists_backup_key ON playlists(backup_key)',
+    );
+    await db.execute(
+      '''CREATE TRIGGER playlists_assign_key AFTER INSERT ON playlists
+      WHEN NEW.backup_key IS NULL BEGIN
+      UPDATE playlists SET backup_key=lower(hex(randomblob(16))) WHERE id=NEW.id; END''',
+    );
   }
 
   Future<List<Track>> tracks({int? playlistId}) async {
@@ -201,14 +228,14 @@ class LibraryStore {
     await db.transaction((txn) async {
       await txn.insert('history', {'track_id': id});
       await txn.rawDelete(
-        'DELETE FROM history WHERE id NOT IN (SELECT id FROM history ORDER BY id DESC LIMIT 5000)',
+        'DELETE FROM history WHERE id NOT IN (SELECT id FROM history ORDER BY julianday(played_at) DESC,id DESC LIMIT 5000)',
       );
     });
   }
 
   Future<List<Track>> recent() async => (await db.rawQuery(
-    '''SELECT t.*, MAX(h.id) AS recent_id
-      FROM tracks t JOIN history h ON t.id=h.track_id GROUP BY t.id ORDER BY recent_id DESC LIMIT 30''',
+    '''SELECT t.*, MAX(julianday(h.played_at)) AS recent_time, MAX(h.id) AS recent_id
+      FROM tracks t JOIN history h ON t.id=h.track_id GROUP BY t.id ORDER BY recent_time DESC,recent_id DESC LIMIT 30''',
   )).map(Track.fromMap).toList();
   Future<List<Playlist>> playlists() async =>
       (await db.rawQuery(

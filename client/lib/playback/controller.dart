@@ -31,6 +31,7 @@ class PlaybackController extends PlaybackModel {
   bool loading = false;
   bool _disposed = false, _recorded = false;
   bool _loaded = false;
+  bool _completionPending = false;
   final Stopwatch _listened = Stopwatch();
   @override
   String? error;
@@ -66,13 +67,19 @@ class PlaybackController extends PlaybackModel {
         _notify();
         if (state.playing &&
             state.processingState == ProcessingState.completed &&
-            !loading) {
+            !loading &&
+            !_completionPending) {
+          _completionPending = true;
           unawaited(
             _enqueue(() async {
-              if (queue.next(completed: true)) {
-                await _load();
-              } else {
-                await audio.pause();
+              try {
+                if (queue.next(completed: true)) {
+                  await _load();
+                } else {
+                  await audio.pause();
+                }
+              } finally {
+                _completionPending = false;
               }
             }),
           );
@@ -144,14 +151,23 @@ class PlaybackController extends PlaybackModel {
       ..reset();
     _notify();
     await audio.pause();
-    if (track.isAsset) {
-      await audio.setAsset(track.path.substring(6));
-    } else {
-      if (!await File(track.path).exists()) {
-        throw FileSystemException('Файл перемещён или удалён', track.path);
+    try {
+      if (track.isAsset) {
+        await audio
+            .setAsset(track.path.substring(6))
+            .timeout(const Duration(seconds: 15));
+      } else {
+        if (!await File(track.path).exists()) {
+          throw FileSystemException('Файл перемещён или удалён', track.path);
+        }
+        await audio
+            .setFilePath(track.path)
+            .timeout(const Duration(seconds: 15));
+        cover = await compute(readCover, track.path);
       }
-      await audio.setFilePath(track.path);
-      cover = await compute(readCover, track.path);
+    } catch (_) {
+      await audio.stop().timeout(const Duration(seconds: 3), onTimeout: () {});
+      rethrow;
     }
     loading = false;
     _loaded = true;
@@ -188,15 +204,17 @@ class PlaybackController extends PlaybackModel {
   });
   @override
   Future<void> next() => _enqueue(() async {
-    if (queue.next()) await _load();
+    final wasPlaying = playing;
+    if (queue.next()) await _load(autoplay: wasPlaying);
   });
   @override
   Future<void> previous() => _enqueue(() async {
+    final wasPlaying = playing;
     if (position.inSeconds > 3) {
       await audio.seek(Duration.zero);
     } else {
       queue.previous();
-      await _load();
+      await _load(autoplay: wasPlaying);
     }
   });
   @override

@@ -1,7 +1,7 @@
 # OPTIMUM
 
-Текущая Windows-сборка: **0.1.1**. Локальный прототип; проверенный portable-пакет
-находится в `dist/OPTIMUM-0.1.1-windows-x64/`, архив — рядом.
+Текущая версия: **0.2.0**. Локальный Windows-прототип; portable-пакеты
+сохраняются в `dist/OPTIMUM-<версия>-windows-x64/`, архивы — рядом.
 
 Музыкальное пространство с Cosmic-интерфейсом. Первый локальный прототип:
 Flutter + SQLite + just_audio, с отдельной основой FastAPI и Together domain.
@@ -11,6 +11,8 @@ Flutter + SQLite + just_audio, с отдельной основой FastAPI и T
 
 - Импорт локальных файлов и рекурсивное сканирование папки без перехода по symlinks.
 - Метаданные в isolate; SQLite-библиотека, поиск, избранное, история.
+- JSON-копии библиотеки: плейлисты, избранное, история, reduced motion; атомарное
+  объединение при восстановлении и автоматическая SQLite-копия перед миграцией v1→v2.
 - Создание, переименование и удаление плейлистов; добавление/удаление треков.
 - Аудиоплеер: play/pause, seek, next/previous, volume, repeat и ручное shuffle.
 - Чтение встроенной обложки выбранного трека; ошибки повреждённых/пропавших файлов.
@@ -43,8 +45,10 @@ cd D:\OptimumTools\workspace\client
 Пользовательские аудиофайлы не отправляются на сервер и не удаляются.
 База — в application support directory Windows; точный путь виден в настройках.
 Если переместить исходную музыку, её нужно импортировать заново.
-Для backup закройте приложение и скопируйте папку базы вместе с файлами SQLite.
-Плейлисты/избранное сохраняются локально; экспорт в облако пока отсутствует.
+Для резервной копии используйте **Настройки → Сохранить копию**; восстановление —
+**Восстановить из JSON**. Аудиофайлы не входят в JSON и должны оставаться на прежних
+путях. Перед открытием 0.2.0 закройте старые экземпляры OPTIMUM.
+Подробности формата и отката миграции: [BACKUPS](docs/BACKUPS.ru.md).
 
 ## Проверки и сборка
 
@@ -53,6 +57,7 @@ cd D:\OptimumTools\workspace\client
 & D:\OptimumTools\flutter\bin\flutter.bat analyze
 & D:\OptimumTools\flutter\bin\flutter.bat test
 & D:\OptimumTools\flutter\bin\flutter.bat test integration_test/windows_player_test.dart -d windows
+& D:\OptimumTools\flutter\bin\flutter.bat test integration_test/codecs_test.dart -d windows
 & D:\OptimumTools\flutter\bin\flutter.bat build windows --release
 ```
 

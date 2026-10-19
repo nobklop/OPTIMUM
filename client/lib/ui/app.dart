@@ -266,7 +266,7 @@ class _WorkspaceState extends State<Workspace> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Версия 0.1 · первый сигнал',
+          'Версия 0.2 · личная библиотека',
           style: TextStyle(fontSize: 10, color: muted),
         ),
       ],
@@ -981,6 +981,45 @@ class _WorkspaceState extends State<Workspace> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'Резервная копия библиотеки',
+            style: TextStyle(fontSize: 19),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Сохраните плейлисты, избранное, историю и настройку движения в JSON. Аудиофайлы в копию не входят и должны оставаться по прежним путям.',
+            style: TextStyle(color: muted),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Восстановление добавляет данные к текущей библиотеке. Повторный импорт той же копии не создаёт дубликаты.',
+            style: TextStyle(color: muted, fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              FilledButton.icon(
+                onPressed: model.busy ? null : model.exportBackup,
+                icon: const Icon(Icons.save_alt),
+                label: const Text('Сохранить копию'),
+              ),
+              OutlinedButton.icon(
+                onPressed: model.busy ? null : model.restoreBackup,
+                icon: const Icon(Icons.restore),
+                label: const Text('Восстановить из JSON'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+    const SizedBox(height: 18),
+    Surface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           const Text('Локальная база данных'),
           const SizedBox(height: 9),
           SelectableText(
@@ -989,7 +1028,7 @@ class _WorkspaceState extends State<Workspace> {
           ),
           const SizedBox(height: 18),
           const Text(
-            'OPTIMUM 0.1.1 · первый рабочий прототип',
+            'OPTIMUM 0.2.0 · локальный Windows-прототип',
             style: TextStyle(color: muted, fontSize: 12),
           ),
           const SizedBox(height: 8),
@@ -1001,7 +1040,7 @@ class _WorkspaceState extends State<Workspace> {
             onPressed: () => showLicensePage(
               context: context,
               applicationName: 'OPTIMUM',
-              applicationVersion: '0.1.1',
+              applicationVersion: '0.2.0',
             ),
             child: const Text('Лицензии компонентов'),
           ),
