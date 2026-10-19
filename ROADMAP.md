@@ -24,6 +24,11 @@
 11. **Совместная волна.** Fair exposure, room modes, group preference tests.
 12. **Альбомы настроения.** Durable worker каждые 5 часов, timezone/retry/idempotence tests.
 13. **Интеграции.** Только разрешённые API; metadata import и честные unavailable states.
+    Уточнение пользователя: вставка ссылки на трек/плейлист Яндекс Музыки,
+    Spotify или SoundCloud → запись в OPTIMUM → воспроизведение; сохранение офлайн
+    там, где сервис/автор предоставляет скачивание. Главный следующий пользовательский
+    сценарий. Требуются отдельные provider adapters, OAuth и проверка разрешений;
+    ссылка на страницу не считается аудиофайлом, защищённые офлайн-кэши не импортируются.
 14. **Windows/Android.** Release profiling, installer/signing, battery/memory/network checks.
 15. **iOS.** macOS/Xcode, signing, реальные устройства, interruptions/background, release QA.
 

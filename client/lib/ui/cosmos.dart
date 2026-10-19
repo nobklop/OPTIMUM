@@ -114,7 +114,7 @@ class StarPainter extends CustomPainter {
   final ValueListenable<double> animation;
   final ValueNotifier<Offset> pointer;
   late final List<Offset> stars = List.generate(
-    136,
+    184,
     (i) => Offset(Random(i * 17).nextDouble(), Random(i * 31 + 8).nextDouble()),
   );
   StarPainter(this.animation, this.pointer)
@@ -142,8 +142,8 @@ class StarPainter extends CustomPainter {
     return image;
   }
 
-  static final ui.Image _cloudA = cloud(const Color(0xFF77778F), .16);
-  static final ui.Image _cloudB = cloud(const Color(0xFF56566B), .12);
+  static final ui.Image _cloudA = cloud(const Color(0xFF85859B), .20);
+  static final ui.Image _cloudB = cloud(const Color(0xFF67677F), .16);
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint();
@@ -164,24 +164,26 @@ class StarPainter extends CustomPainter {
       canvas.restore();
     }
 
-    nebula(
-      Offset(
-        size.width * (.77 + .06 * sin(phase)),
-        size.height * (.29 + .05 * cos(phase)),
-      ),
-      size.width * .58,
-      size.height * .39,
-      _cloudA,
-    );
-    nebula(
-      Offset(
-        size.width * (.38 + .05 * cos(phase)),
-        size.height * (.77 + .04 * sin(phase * 2)),
-      ),
-      size.width * .48,
-      size.height * .28,
-      _cloudB,
-    );
+    // Separate banks of haze leave dark gaps across the whole field.
+    const banks = [
+      (.12, .18, .27, .22),
+      (.52, .12, .24, .19),
+      (.88, .38, .23, .31),
+      (.29, .72, .27, .26),
+      (.70, .88, .26, .22),
+    ];
+    for (var i = 0; i < banks.length; i++) {
+      final bank = banks[i];
+      nebula(
+        Offset(
+          size.width * (bank.$1 + .025 * sin(phase + i * 1.7)),
+          size.height * (bank.$2 + .035 * cos(phase * (i % 2 + 1) + i)),
+        ),
+        size.width * bank.$3,
+        size.height * bank.$4,
+        i.isEven ? _cloudA : _cloudB,
+      );
+    }
     // A distant orbital arc moves below the stars; all colors remain nearly neutral.
     canvas.save();
     canvas.translate(size.width * .8, size.height * .55);
@@ -239,6 +241,146 @@ class StarPainter extends CustomPainter {
   @override
   bool shouldRepaint(StarPainter oldDelegate) =>
       oldDelegate.animation != animation || oldDelegate.pointer != pointer;
+}
+
+/// Fine decoration spans the wide hero card, independently of the large planet.
+class HeroSky extends StatelessWidget {
+  const HeroSky({super.key});
+  @override
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: CustomPaint(painter: HeroSkyPainter(CosmicMotion.of(context))),
+  );
+}
+
+class HeroSkyPainter extends CustomPainter {
+  final ValueListenable<double>? animation;
+  HeroSkyPainter(this.animation) : super(repaint: animation);
+  static final _points = List.generate(
+    62,
+    (i) => Offset(
+      .30 + Random(i * 41 + 19).nextDouble() * .70,
+      Random(i * 23 + 7).nextDouble(),
+    ),
+  );
+  @override
+  void paint(Canvas canvas, Size size) {
+    final phase = (animation?.value ?? 0) * pi * 2;
+    final scale = (size.width / 1000).clamp(.4, 1.5);
+    canvas.drawImageRect(
+      StarPainter._cloudB,
+      const Rect.fromLTWH(0, 0, 256, 256),
+      Rect.fromCenter(
+        center: Offset(size.width * .57, size.height * .45),
+        width: size.width * .5,
+        height: size.height * 1.2,
+      ),
+      Paint()..filterQuality = FilterQuality.low,
+    );
+    final line = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = .6
+      ..color = paper.withValues(alpha: .085);
+    canvas.save();
+    canvas.translate(size.width * .77, size.height * .58);
+    canvas.rotate(-.31 + sin(phase) * .035);
+    for (var i = 0; i < 2; i++) {
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: size.width * (.66 + i * .08),
+          height: size.height * (1.06 + i * .12),
+        ),
+        line,
+      );
+    }
+    canvas.restore();
+    for (var i = 0; i < _points.length; i++) {
+      final point = _points[i];
+      final x = point.dx * size.width + sin(phase + i) * 3 * scale;
+      final y = point.dy * size.height + cos(phase * 2 + i) * 2;
+      // Preserve the quiet area behind the copy and buttons.
+      final fade = ((point.dx - .30) / .27).clamp(0.0, 1.0);
+      final alpha =
+          fade * (.14 + .15 * (.5 + .5 * sin(phase * (i % 3 + 1) + i)));
+      final center = Offset(x, y);
+      canvas.drawCircle(
+        center,
+        i % 11 == 0 ? 1.2 : .55,
+        Paint()..color = paper.withValues(alpha: alpha),
+      );
+      if (i % 17 == 0) {
+        final glint = Paint()
+          ..strokeWidth = .55
+          ..color = paper.withValues(alpha: alpha * .6);
+        canvas.drawLine(
+          center - const Offset(3, 0),
+          center + const Offset(3, 0),
+          glint,
+        );
+        canvas.drawLine(
+          center - const Offset(0, 3),
+          center + const Offset(0, 3),
+          glint,
+        );
+      }
+    }
+    const constellation = [
+      Offset(.47, .24),
+      Offset(.51, .19),
+      Offset(.55, .28),
+      Offset(.58, .23),
+    ];
+    final drift = Offset(sin(phase) * 3, cos(phase) * 2);
+    for (var i = 0; i < constellation.length; i++) {
+      final point =
+          Offset(
+            constellation[i].dx * size.width,
+            constellation[i].dy * size.height,
+          ) +
+          drift;
+      canvas.drawCircle(
+        point,
+        1.15,
+        Paint()..color = paper.withValues(alpha: .36),
+      );
+      if (i > 0) {
+        final previous =
+            Offset(
+              constellation[i - 1].dx * size.width,
+              constellation[i - 1].dy * size.height,
+            ) +
+            drift;
+        canvas.drawLine(
+          previous,
+          point,
+          Paint()
+            ..strokeWidth = .55
+            ..color = paper.withValues(alpha: .10),
+        );
+      }
+    }
+    for (var i = 0; i < 2; i++) {
+      final center = Offset(
+        size.width * (.58 + i * .12) + sin(phase + i) * 6,
+        size.height * (.73 - i * .39) + cos(phase + i) * 4,
+      );
+      final radius = (i == 0 ? 5.0 : 3.0) * scale;
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..shader = const RadialGradient(
+            center: Alignment(-.5, -.6),
+            radius: 1.5,
+            colors: [Color(0xFF8B8B9D), Color(0xFF2D2D3D), Color(0xFF101018)],
+          ).createShader(Rect.fromCircle(center: center, radius: radius)),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(HeroSkyPainter oldDelegate) =>
+      oldDelegate.animation != animation;
 }
 
 class OrbitArt extends StatelessWidget {

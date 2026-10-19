@@ -26,6 +26,9 @@ void main() {
                   Positioned.fill(
                     child: CustomPaint(painter: StarPainter(clock, pointer)),
                   ),
+                  Positioned.fill(
+                    child: CustomPaint(painter: HeroSkyPainter(clock)),
+                  ),
                   Center(
                     child: SizedBox.square(
                       dimension: 350,

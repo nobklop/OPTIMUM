@@ -370,6 +370,7 @@ class _WorkspaceState extends State<Workspace> {
           ),
           child: Stack(
             children: [
+              const Positioned.fill(child: IgnorePointer(child: HeroSky())),
               Positioned(
                 right: large ? -15 : -100,
                 top: large ? -35 : 10,
@@ -1028,7 +1029,7 @@ class _WorkspaceState extends State<Workspace> {
           ),
           const SizedBox(height: 18),
           const Text(
-            'OPTIMUM 0.2.0 · локальный Windows-прототип',
+            'OPTIMUM 0.2.1 · локальный Windows-прототип',
             style: TextStyle(color: muted, fontSize: 12),
           ),
           const SizedBox(height: 8),
@@ -1040,7 +1041,7 @@ class _WorkspaceState extends State<Workspace> {
             onPressed: () => showLicensePage(
               context: context,
               applicationName: 'OPTIMUM',
-              applicationVersion: '0.2.0',
+              applicationVersion: '0.2.1',
             ),
             child: const Text('Лицензии компонентов'),
           ),
