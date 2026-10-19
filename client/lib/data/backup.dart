@@ -13,6 +13,12 @@ class LibraryBackup {
     final tracks = await txn.query('tracks');
     final byId = {for (final track in tracks) track['id']: track['path']};
     final playlists = await txn.query('playlists', orderBy: 'id');
+    final links = await txn.query(
+      'music_links',
+      columns: ['id', 'url', 'title', 'download_path'],
+      orderBy: 'id',
+    );
+    final linkUrls = {for (final row in links) row['id']: row['url']};
     final exportedPlaylists = <Map<String, Object?>>[];
     for (final playlist in playlists) {
       final entries = await txn.query(
@@ -24,6 +30,13 @@ class LibraryBackup {
       exportedPlaylists.add({
         'key': playlist['backup_key'],
         'name': playlist['name'],
+        'source_url': playlist['source_url'],
+        'links': (await txn.query(
+          'playlist_links',
+          where: 'playlist_id=?',
+          whereArgs: [playlist['id']],
+          orderBy: 'position',
+        )).map((e) => linkUrls[e['link_id']]).toList(),
         'tracks': entries.map((entry) => byId[entry['track_id']]).toList(),
       });
     }
@@ -39,12 +52,16 @@ class LibraryBackup {
     );
     final content = const JsonEncoder.withIndent('  ').convert({
       'format': 'optimum-library',
-      'version': 2,
-      'links': (await txn.query(
-        'music_links',
-        columns: ['url', 'title', 'download_path'],
-        orderBy: 'id',
-      )),
+      'version': 3,
+      'links': links
+          .map(
+            (e) => {
+              'url': e['url'],
+              'title': e['title'],
+              'download_path': e['download_path'],
+            },
+          )
+          .toList(),
       'created_at': DateTime.now().toUtc().toIso8601String(),
       'tracks': tracks
           .map(
@@ -77,6 +94,7 @@ class LibraryBackup {
     return store.db.transaction((txn) async {
       var added = 0, restoredPlaylists = 0;
       final ids = <String, int>{};
+      final playlistIds = <String, int>{};
       for (final track in snapshot.tracks) {
         final path = track['path'] as String;
         final existing = await txn.query(
@@ -108,8 +126,13 @@ class LibraryBackup {
       for (final playlist in snapshot.playlists) {
         final existing = await txn.query(
           'playlists',
-          where: 'backup_key=?',
-          whereArgs: [playlist['key']],
+          where: playlist['source_url'] == null
+              ? 'backup_key=?'
+              : 'backup_key=? OR source_url=?',
+          whereArgs: [
+            playlist['key'],
+            if (playlist['source_url'] != null) playlist['source_url'],
+          ],
           limit: 1,
         );
         final int id;
@@ -117,11 +140,13 @@ class LibraryBackup {
           id = await txn.insert('playlists', {
             'name': playlist['name'],
             'backup_key': playlist['key'],
+            'source_url': playlist['source_url'],
           });
           restoredPlaylists++;
         } else {
           id = existing.first['id'] as int;
         }
+        playlistIds[playlist['key'] as String] = id;
         for (final path in playlist['tracks'] as List<String>) {
           await txn.rawInsert(
             '''INSERT OR IGNORE INTO playlist_tracks(playlist_id,track_id,position)
@@ -167,6 +192,37 @@ class LibraryBackup {
           );
         }
       }
+      for (final playlist in snapshot.playlists) {
+        final id = playlistIds[playlist['key']]!;
+        final present = await txn.rawQuery(
+          'SELECT p.position,l.url FROM playlist_links p JOIN music_links l ON l.id=p.link_id WHERE p.playlist_id=? ORDER BY p.position',
+          [id],
+        );
+        final counts = <String, int>{};
+        for (final row in present) {
+          final url = row['url'] as String;
+          counts[url] = (counts[url] ?? 0) + 1;
+        }
+        final seen = <String, int>{};
+        var position = present.isEmpty
+            ? 0
+            : (present.last['position'] as int) + 1;
+        for (final url in playlist['links'] as List<String>) {
+          seen[url] = (seen[url] ?? 0) + 1;
+          if (seen[url]! <= (counts[url] ?? 0)) continue;
+          final link = await txn.query(
+            'music_links',
+            columns: ['id'],
+            where: 'url=?',
+            whereArgs: [url],
+          );
+          await txn.insert('playlist_links', {
+            'playlist_id': id,
+            'link_id': link.single['id'],
+            'position': position++,
+          });
+        }
+      }
       return BackupResult(added, restoredPlaylists);
     });
   }
@@ -178,7 +234,7 @@ class LibraryBackup {
     final root = jsonDecode(content);
     if (root is! Map<String, dynamic> ||
         root['format'] != 'optimum-library' ||
-        ![1, 2].contains(root['version'])) {
+        ![1, 2, 3].contains(root['version'])) {
       throw const FormatException(
         'Неизвестный формат или версия резервной копии',
       );
@@ -203,7 +259,7 @@ class LibraryBackup {
 
     final paths = <String>{};
     final links = <Map<String, Object?>>[];
-    if (root['version'] == 2) {
+    if (root['version'] >= 2) {
       final seen = <String>{};
       for (final row in rows('links', 10000)) {
         if (row is! Map) throw const FormatException('Некорректная ссылка');
@@ -255,6 +311,7 @@ class LibraryBackup {
       }
     }
     final keys = <String>{};
+    final savedUrls = links.map((l) => l['url']).toSet();
     final playlists = <Map<String, Object?>>[];
     for (final row in rows('playlists', 5000)) {
       if (row is! Map ||
@@ -264,6 +321,23 @@ class LibraryBackup {
         throw const FormatException('Некорректный идентификатор плейлиста');
       }
       final entries = row['tracks'];
+      final linkEntries = root['version'] == 3 ? row['links'] : <String>[];
+      if (linkEntries is! List ||
+          linkEntries.length > 10000 ||
+          linkEntries.any(
+            (url) => url is! String || !savedUrls.contains(url),
+          )) {
+        throw const FormatException('Некорректные треки по ссылке в плейлисте');
+      }
+      var source = root['version'] == 3 ? row['source_url'] : null;
+      if (source != null &&
+          (source is! String ||
+              !['playlist', 'album'].contains(MusicLink.parse(source).kind))) {
+        throw const FormatException('Некорректный источник плейлиста');
+      }
+      if (source != null) {
+        source = MusicLink.parse(source as String).uri.toString();
+      }
       if (entries is! List ||
           entries.length > 50000 ||
           entries.any((p) => p is! String || !paths.contains(p)) ||
@@ -273,6 +347,8 @@ class LibraryBackup {
       playlists.add({
         'key': row['key'],
         'name': text(row['name'], 'playlist.name', 80),
+        'source_url': source,
+        'links': linkEntries.cast<String>(),
         'tracks': entries.cast<String>(),
       });
     }

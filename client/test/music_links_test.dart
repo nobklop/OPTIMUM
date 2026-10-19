@@ -87,7 +87,20 @@ void main() {
           'Не перезаписывать',
         );
         await store.addStudies();
-        final backup = await LibraryBackup(store).exportJson();
+        final legacyPlaylist = await store.createPlaylist('Старый плейлист');
+        await store.addToPlaylist(
+          legacyPlaylist,
+          (await store.tracks()).first.id,
+        );
+        final legacy =
+            jsonDecode(await LibraryBackup(store).exportJson())
+                as Map<String, dynamic>;
+        legacy['version'] = 2;
+        for (final row in legacy['playlists'] as List) {
+          (row as Map).remove('source_url');
+          row.remove('links');
+        }
+        final backup = jsonEncode(legacy);
         await store.close();
         store = await LibraryStore.open(
           databasePath: p.join(folder.path, 'library.db'),
@@ -100,6 +113,7 @@ void main() {
           await LibraryBackup(target).restoreJson(backup);
           await LibraryBackup(target).restoreJson(backup);
           expect(await target.links(), hasLength(1));
+          expect((await target.playlists()).single.count, 1);
           final old = jsonDecode(backup) as Map<String, dynamic>;
           old['version'] = 1;
           old.remove('links');
@@ -179,40 +193,42 @@ void main() {
   );
 
   test(
-    'v2 to v3 migration backs up old schema and rolls back if migration fails',
+    'v3 to v4 migration backs up old schema and rolls back if migration fails',
     () async {
-      final folder = await Directory.systemTemp.createTemp('optimum-v3-');
+      final folder = await Directory.systemTemp.createTemp('optimum-v4-');
       final path = p.join(folder.path, 'library.db');
       var store = await LibraryStore.open(databasePath: path);
       await store.addStudies();
-      await store.db.execute('DROP TABLE music_links');
-      await store.db.setVersion(2);
+      await store.db.execute('DROP TABLE playlist_links');
+      await store.db.execute('DROP INDEX playlists_source_url');
+      await store.db.execute('ALTER TABLE playlists DROP COLUMN source_url');
+      await store.db.setVersion(3);
       await store.close();
       store = await LibraryStore.open(databasePath: path);
-      expect(await store.db.getVersion(), 3);
+      expect(await store.db.getVersion(), 4);
       expect(await store.tracks(), hasLength(3));
       expect(await store.links(), isEmpty);
       await store.close();
       final snapshots = (await folder.list().toList()).where(
-        (f) => f.path.contains('.before-v3-'),
+        (f) => f.path.contains('.before-v4-'),
       );
       final original = await openDatabase(
         snapshots.single.path,
         readOnly: true,
       );
-      expect(await original.getVersion(), 2);
+      expect(await original.getVersion(), 3);
       expect(await original.query('tracks'), hasLength(3));
       await original.close();
-      // Duplicate table deliberately causes CREATE to fail, preserving old version/data.
+      // Duplicate column deliberately causes ALTER to fail, preserving old version/data.
       final broken = await openDatabase(path);
-      await broken.setVersion(2);
+      await broken.setVersion(3);
       await broken.close();
       await expectLater(
         LibraryStore.open(databasePath: path),
         throwsA(isA<DatabaseException>()),
       );
       final after = await openDatabase(path, readOnly: true);
-      expect(await after.getVersion(), 2);
+      expect(await after.getVersion(), 3);
       expect(await after.query('tracks'), hasLength(3));
       await after.close();
       await folder.delete(recursive: true);

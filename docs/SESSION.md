@@ -1,5 +1,42 @@
 # Состояние разработки
 
+## Текущий этап: 0.4.0 установлен, готов к публикации
+
+Пользователь подтвердил стабильный вход Яндекса и запросил здесь же добавить трек,
+скачать его, перенести весь плейлист. Вход и пользовательский WebPlayer profile
+сохранены. Защищённое аудио не извлекаем: Яндекс offline зашифрован; реализован
+нативный плейлист названий/ссылок и привязка своего аудиофайла для офлайна.
+SQLite v4: playlist_links с порядком/повторами, source_url; before-v4 snapshot.
+JSON v3 с source/order, читает v1/v2; атомарный импорт/обновление по source URL.
+Новые файлы link_transfer.dart, yandex_page.dart, service_transfer.dart.
+В account header добавлены текущий трек/перенос плейлиста с preview и отменой.
+Yandex DOM virtual rows: data-index, одинаковые 56px слоты; пустые placeholders
+пропускаются до загрузки, disc headers отдельно; сохраняем только полный набор.
+Итоговые analyzer no issues, 19 unit/widget passed, backend 17 passed/ruff clean.
+Native service_transfer_test passed: UI/реальный WebView2, альбом /album/419460
+21 трек, полный публичный плейлист 100 треков (1175 → UUID 2111e2b6-587d-a600-2fea-54df7c314477),
+preview до записи, отмена, добавление трека, нативный список и свой WAV играет офлайн.
+1295 entries/order/duplicates, rollback, backup merge, cancellation/source-change
+и начальный declared-count guard покрыты domain tests. Приватная коллекция пользователя
+не использовалась. Кадры/результаты в artifacts/, подробности в VERIFICATION.
+Исправлены пропуски короткого viewport: seek к первой недостающей позиции, а не
+слепая прокрутка. Также нормализация пути и свежая связь файла при открытии старой строки.
+Последний native test запускался с новым TEMP: media_kit debug использует PID-файл
+с native pointer, старый PID иногда переиспользуется. Release не использует этот buffer.
+Исследовательский probe заменён законченным integration_test/service_transfer_test.dart.
+
+0.4.0+7 release и installer собраны. Реальное обновление 0.3.0→0.4.0 прошло:
+D:\OptimumTools\OPTIMUM-app\optimum.exe запущен (PID 14272), отвечает; все 35 payload
+hashes, engine и registry совпали. SQLite v3→v4, integrity=ok, количества и digest
+всех прежних столбцов/строк шести таблиц сохранены, WebPlayer directory остался.
+Ручной before-install-0.4.0.db и автоматический before-v4 сохранены.
+Installer 14626421 bytes; SHA-256 1beb5362fc7f431c8b6b3f082ef5cbc420b47336a1fc4d5a3a54ae3e821f8a6b.
+Осталось: commit/tag/push, publish-release.py 0.4.0 --publish --latest и публичная
+проверка EXE/checksum/latest; затем зафиксировать результат. Не изменять уже собранный
+код без новой проверки/сборки. Работать через D:\OptimumTools\workspace.
+
+## Завершённый этап 0.3.0
+
 Текущий этап: **0.3.0 опубликован и установлен**. Пользователь выбрал обычные ссылки
 без API-ключей и вход/библиотеку сервисов внутри OPTIMUM, без автоматического переноса
 плейлистов/лайков в локальную базу. SQLite v3 + before-v3, JSON v2 (читает v1),

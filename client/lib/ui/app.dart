@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide RepeatMode;
 import '../app_model.dart';
 import '../data/library.dart';
+import '../data/music_link.dart';
 import '../playback/model.dart';
 import '../playback/queue.dart';
 import 'cosmos.dart';
@@ -268,7 +269,7 @@ class _WorkspaceState extends State<Workspace> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Версия 0.3 · музыка по ссылке',
+          'Версия 0.4 · перенос плейлистов',
           style: TextStyle(fontSize: 10, color: muted),
         ),
       ],
@@ -628,7 +629,9 @@ class _WorkspaceState extends State<Workspace> {
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
             child: _section(
               playlist?.name ?? 'Ваша библиотека',
-              filter == 3 && selectedPlaylist == null
+              playlist?.linkCount != null && playlist!.linkCount > 0
+                  ? '${playlist.count} треков · из сервиса, для прослушивания нужен интернет'
+                  : filter == 3 && selectedPlaylist == null
                   ? '${model.links.length} ссылок · плееры сервисов внутри OPTIMUM'
                   : '${tracks.length} треков · музыка хранится на вашем устройстве',
             ),
@@ -649,6 +652,22 @@ class _WorkspaceState extends State<Workspace> {
                       selected: filter == i,
                       onSelected: (_) => setState(() => filter = i),
                     ),
+                  ),
+                if (playlist?.sourceUrl != null)
+                  OutlinedButton.icon(
+                    onPressed: () => openMusicLink(
+                      context,
+                      model,
+                      player,
+                      SavedMusicLink(
+                        -1,
+                        playlist!.name,
+                        MusicLink.parse(playlist.sourceUrl!),
+                      ),
+                      website: true,
+                    ),
+                    icon: const Icon(Icons.open_in_new, size: 17),
+                    label: const Text('Открыть плейлист в сервисе'),
                   ),
                 OutlinedButton.icon(
                   onPressed: model.busy
@@ -679,7 +698,21 @@ class _WorkspaceState extends State<Workspace> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: filter == 3 && selectedPlaylist == null
+            child: playlist != null && playlist.linkCount > 0
+                ? FutureBuilder<List<SavedMusicLink>>(
+                    future: model.store.playlistLinks(playlist.id),
+                    builder: (_, data) => MusicLinksView(
+                      model: model,
+                      player: player,
+                      search: search,
+                      entries: data.data ?? [],
+                      playlistId: playlist.id,
+                      leading: tracks
+                          .map((t) => _track(t, tracks, playlist: playlist.id))
+                          .toList(),
+                    ),
+                  )
+                : filter == 3 && selectedPlaylist == null
                 ? MusicLinksView(model: model, player: player, search: search)
                 : tracks.isEmpty
                 ? Center(
@@ -1069,7 +1102,7 @@ class _WorkspaceState extends State<Workspace> {
           ),
           const SizedBox(height: 18),
           const Text(
-            'OPTIMUM 0.3.0 · Windows-прототип',
+            'OPTIMUM 0.4.0 · Windows-прототип',
             style: TextStyle(color: muted, fontSize: 12),
           ),
           const SizedBox(height: 8),
@@ -1081,7 +1114,7 @@ class _WorkspaceState extends State<Workspace> {
             onPressed: () => showLicensePage(
               context: context,
               applicationName: 'OPTIMUM',
-              applicationVersion: '0.3.0',
+              applicationVersion: '0.4.0',
             ),
             child: const Text('Лицензии компонентов'),
           ),

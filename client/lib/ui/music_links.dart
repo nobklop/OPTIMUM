@@ -15,18 +15,33 @@ import '../data/service_account.dart';
 import '../playback/model.dart';
 import 'cosmos.dart';
 import 'web_profile.dart';
+import 'service_transfer.dart';
 
 Future<void> openMusicLink(
   BuildContext context,
   AppModel model,
   PlaybackModel player,
-  SavedMusicLink saved,
-) async {
+  SavedMusicLink saved, {
+  bool website = false,
+}) async {
+  final currentSaved =
+      model.links.where((s) => s.id == saved.id).firstOrNull ?? saved;
+  if (currentSaved.downloadPath != null &&
+      await File(currentSaved.downloadPath!).exists()) {
+    final track = model.tracks
+        .where((t) => p.equals(t.path, currentSaved.downloadPath!))
+        .firstOrNull;
+    if (track != null) {
+      await player.select([track], 0);
+      return;
+    }
+  }
   await player.stop();
   if (!context.mounted) return;
   await Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder: (_) => ServicePlayer(saved: saved, model: model),
+      builder: (_) =>
+          ServicePlayer(saved: currentSaved, model: model, website: website),
     ),
   );
 }
@@ -166,22 +181,28 @@ class MusicLinksView extends StatelessWidget {
   final AppModel model;
   final PlaybackModel player;
   final String search;
+  final List<SavedMusicLink>? entries;
+  final int? playlistId;
+  final List<Widget> leading;
   const MusicLinksView({
     super.key,
     required this.model,
     required this.player,
     this.search = '',
+    this.entries,
+    this.playlistId,
+    this.leading = const [],
   });
   @override
   Widget build(BuildContext context) {
-    final links = model.links
+    final links = (entries ?? model.links)
         .where(
           (s) => '${s.title} ${s.link.provider} ${s.link.uri}'
               .toLowerCase()
               .contains(search.toLowerCase()),
         )
         .toList();
-    if (links.isEmpty) {
+    if (links.isEmpty && leading.isEmpty) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(28),
@@ -195,9 +216,10 @@ class MusicLinksView extends StatelessWidget {
     }
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 18),
-      itemCount: links.length,
+      itemCount: leading.length + links.length,
       itemBuilder: (context, i) {
-        final s = links[i];
+        if (i < leading.length) return leading[i];
+        final s = links[i - leading.length];
         return ListTile(
           leading: const Icon(Icons.link_rounded),
           title: Text(s.title, maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -208,20 +230,74 @@ class MusicLinksView extends StatelessWidget {
             style: const TextStyle(fontSize: 11, color: muted),
           ),
           isThreeLine: true,
-          onTap: () => openMusicLink(context, model, player, s),
+          onTap: () => openMusicLink(
+            context,
+            model,
+            player,
+            s,
+            website: entries != null,
+          ),
           trailing: PopupMenuButton<String>(
             tooltip: 'Действия со ссылкой',
-            onSelected: (action) {
+            onSelected: (action) async {
               if (action == 'copy') {
                 Clipboard.setData(ClipboardData(text: s.link.uri.toString()));
               }
               if (action == 'remove') {
-                model.task(() => model.store.removeLink(s.id));
+                if (playlistId != null && s.playlistPosition != null) {
+                  await model.task(
+                    () => model.store.removePlaylistLink(
+                      playlistId!,
+                      s.playlistPosition!,
+                    ),
+                  );
+                } else {
+                  final yes = await showDialog<bool>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Удалить ссылку из библиотеки?'),
+                      content: const Text(
+                        'Ссылка также исчезнет из плейлистов OPTIMUM. Аудиофайлы останутся на устройстве.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Отмена'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Удалить ссылку'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (yes == true) {
+                    await model.task(() => model.store.removeLink(s.id));
+                  }
+                }
+              }
+              if (action == 'website' && context.mounted) {
+                await openMusicLink(context, model, player, s, website: true);
               }
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'copy', child: Text('Копировать ссылку')),
-              PopupMenuItem(value: 'remove', child: Text('Убрать из списка')),
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'copy',
+                child: Text('Копировать ссылку'),
+              ),
+              if (s.link.service != MusicService.audio)
+                const PopupMenuItem(
+                  value: 'website',
+                  child: Text('Открыть в аккаунте сервиса'),
+                ),
+              PopupMenuItem(
+                value: 'remove',
+                child: Text(
+                  playlistId == null
+                      ? 'Удалить ссылку из библиотеки'
+                      : 'Убрать из этого плейлиста',
+                ),
+              ),
             ],
           ),
         );
@@ -234,16 +310,19 @@ class ServicePlayer extends StatefulWidget {
   final SavedMusicLink? saved;
   final ServiceAccount? account;
   final AppModel model;
+  final bool website;
   const ServicePlayer({
     super.key,
     required SavedMusicLink this.saved,
     required this.model,
+    this.website = false,
   }) : account = null;
   const ServicePlayer.account({
     super.key,
     required ServiceAccount this.account,
     required this.model,
-  }) : saved = null;
+  }) : saved = null,
+       website = true;
   @override
   State<ServicePlayer> createState() => ServicePlayerState();
 }
@@ -254,6 +333,7 @@ class ServicePlayerState extends State<ServicePlayer> {
   StreamSubscription<String>? _navigation;
   StreamSubscription<LoadingState>? _loading;
   bool webLoading = false;
+  bool transferActive = false;
   String? currentAddress;
   bool get isAccount => widget.account != null;
   SavedMusicLink get saved => widget.saved!;
@@ -345,6 +425,10 @@ class ServicePlayerState extends State<ServicePlayer> {
       return;
     }
     final link = saved.link;
+    if (widget.website && link.service != MusicService.audio) {
+      await controller!.loadUrl(link.uri.toString());
+      return;
+    }
     if (link.service == MusicService.audio) {
       final escaped = const HtmlEscape(
         HtmlEscapeMode.attribute,
@@ -484,20 +568,22 @@ class ServicePlayerState extends State<ServicePlayer> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     FilledButton.icon(
-                      onPressed: ready
+                      onPressed: ready && !transferActive
                           ? () => controller!.loadUrl(widget.account!.loginUrl)
                           : null,
                       icon: const Icon(Icons.login, size: 18),
                       label: const Text('Войти / сменить аккаунт'),
                     ),
                     OutlinedButton.icon(
-                      onPressed: ready ? loadPlayer : null,
+                      onPressed: ready && !transferActive ? loadPlayer : null,
                       icon: const Icon(Icons.library_music_outlined, size: 18),
                       label: const Text('Моя библиотека'),
                     ),
                     IconButton(
                       tooltip: 'Обновить страницу',
-                      onPressed: ready ? () => controller!.reload() : null,
+                      onPressed: ready && !transferActive
+                          ? () => controller!.reload()
+                          : null,
                       icon: const Icon(Icons.refresh),
                     ),
                     if (controller != null)
@@ -505,7 +591,9 @@ class ServicePlayerState extends State<ServicePlayer> {
                         stream: controller!.historyChanged,
                         builder: (_, snapshot) => IconButton(
                           tooltip: 'Назад на странице',
-                          onPressed: snapshot.data?.canGoBack == true
+                          onPressed:
+                              !transferActive &&
+                                  snapshot.data?.canGoBack == true
                               ? () => controller!.goBack()
                               : null,
                           icon: const Icon(Icons.undo),
@@ -524,6 +612,15 @@ class ServicePlayerState extends State<ServicePlayer> {
                   'Для выхода используйте меню самого сервиса. Вход через Google/Apple и воспроизведение могут ограничиваться сервисом во встроенном браузере.',
                   style: TextStyle(fontSize: 11, color: muted),
                 ),
+                if (ready && controller != null)
+                  ServiceTransferActions(
+                    model: widget.model,
+                    service: service,
+                    execute: controller!.executeScript,
+                    onBusy: (value) {
+                      if (mounted) setState(() => transferActive = value);
+                    },
+                  ),
               ] else if (service == MusicService.audio) ...[
                 const SizedBox(height: 12),
                 Wrap(
@@ -565,6 +662,19 @@ class ServicePlayerState extends State<ServicePlayer> {
                   style: TextStyle(fontSize: 11, color: muted),
                 ),
               ],
+              if (!isAccount &&
+                  widget.website &&
+                  service != MusicService.audio &&
+                  ready &&
+                  controller != null)
+                ServiceTransferActions(
+                  model: widget.model,
+                  service: service,
+                  execute: controller!.executeScript,
+                  onBusy: (value) {
+                    if (mounted) setState(() => transferActive = value);
+                  },
+                ),
             ],
           ),
         ),
@@ -602,10 +712,13 @@ class ServicePlayerState extends State<ServicePlayer> {
         if (webLoading) const LinearProgressIndicator(minHeight: 2),
         Expanded(
           child: ready && controller != null
-              ? Webview(
-                  controller!,
-                  permissionRequested: (_, _, _) =>
-                      WebviewPermissionDecision.deny,
+              ? IgnorePointer(
+                  ignoring: transferActive,
+                  child: Webview(
+                    controller!,
+                    permissionRequested: (_, _, _) =>
+                        WebviewPermissionDecision.deny,
+                  ),
                 )
               : Center(
                   child: error == null

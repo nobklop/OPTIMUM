@@ -83,7 +83,7 @@ class MusicLink {
       // Current public playlist identifiers, supported by the service's page player.
       if (parts.length == 2 &&
           parts[0] == 'playlists' &&
-          RegExp(r'^[a-zA-Z0-9-]{8,100}$').hasMatch(parts[1])) {
+          RegExp(r'^(?:lk\.)?[a-zA-Z0-9-]{8,100}$').hasMatch(parts[1])) {
         return MusicLink._(
           Uri.https('music.yandex.ru', '/${parts.join('/')}'),
           MusicService.yandex,
@@ -165,11 +165,19 @@ class SavedMusicLink {
   final String title;
   final MusicLink link;
   final String? downloadPath;
-  const SavedMusicLink(this.id, this.title, this.link, {this.downloadPath});
+  final int? playlistPosition;
+  const SavedMusicLink(
+    this.id,
+    this.title,
+    this.link, {
+    this.downloadPath,
+    this.playlistPosition,
+  });
   factory SavedMusicLink.fromMap(Map<String, Object?> row) => SavedMusicLink(
     row['id'] as int,
     row['title'] as String,
     MusicLink.parse(row['url'] as String),
     downloadPath: row['download_path'] as String?,
+    playlistPosition: row['playlist_position'] as int?,
   );
 }

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'music_link.dart';
+import 'link_transfer.dart';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -47,8 +48,16 @@ class Track {
 
 class Playlist {
   final int id, count;
+  final int linkCount;
+  final String? sourceUrl;
   final String name;
-  const Playlist(this.id, this.name, this.count);
+  const Playlist(
+    this.id,
+    this.name,
+    this.count, {
+    this.linkCount = 0,
+    this.sourceUrl,
+  });
 }
 
 Map<String, Object?> readTrack(String path) {
@@ -96,14 +105,14 @@ class LibraryStore {
     }
     final db = await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys=ON');
         final oldVersion = await db.getVersion();
-        if (oldVersion > 0 && oldVersion < 3 && path != ':memory:') {
+        if (oldVersion > 0 && oldVersion < 4 && path != ':memory:') {
           // A consistent SQLite snapshot, even if another app instance is open.
           await db.execute('VACUUM INTO ?', [
-            '$path.before-v3-${DateTime.now().toUtc().microsecondsSinceEpoch}.db',
+            '$path.before-v4-${DateTime.now().toUtc().microsecondsSinceEpoch}.db',
           ]);
         }
       },
@@ -129,6 +138,7 @@ class LibraryStore {
         );
         await _playlistKeys(db);
         await _linkTable(db);
+        await _playlistLinks(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -136,10 +146,77 @@ class LibraryStore {
           await _playlistKeys(db);
         }
         if (oldVersion < 3) await _linkTable(db);
+        if (oldVersion < 4) await _playlistLinks(db);
       },
     );
     return LibraryStore(db);
   }
+
+  static Future<void> _playlistLinks(DatabaseExecutor db) async {
+    await db.execute('ALTER TABLE playlists ADD COLUMN source_url TEXT');
+    await db.execute(
+      'CREATE UNIQUE INDEX playlists_source_url ON playlists(source_url)',
+    );
+    await db.execute('''CREATE TABLE playlist_links(
+      playlist_id INTEGER NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+      link_id INTEGER NOT NULL REFERENCES music_links(id) ON DELETE CASCADE,
+      position INTEGER NOT NULL, PRIMARY KEY(playlist_id,position))''');
+  }
+
+  Future<List<SavedMusicLink>> playlistLinks(
+    int id,
+  ) async => (await db.rawQuery(
+    '''SELECT l.*,p.position AS playlist_position FROM music_links l JOIN playlist_links p ON l.id=p.link_id
+      WHERE p.playlist_id=? ORDER BY p.position''',
+    [id],
+  )).map(SavedMusicLink.fromMap).toList();
+
+  Future<int> importLinkPlaylist(PlaylistTransfer transfer) async {
+    transfer.validate();
+    return db.transaction((txn) async {
+      final existing = await txn.query(
+        'playlists',
+        where: 'source_url=?',
+        whereArgs: [transfer.source.uri.toString()],
+      );
+      final id = existing.isEmpty
+          ? await txn.insert('playlists', {
+              'name': transfer.name.trim(),
+              'source_url': transfer.source.uri.toString(),
+            })
+          : existing.single['id'] as int;
+      await txn.delete(
+        'playlist_links',
+        where: 'playlist_id=?',
+        whereArgs: [id],
+      );
+      for (var i = 0; i < transfer.tracks.length; i++) {
+        final track = transfer.tracks[i];
+        await txn.rawInsert(
+          'INSERT OR IGNORE INTO music_links(url,title) VALUES(?,?)',
+          [track.link.uri.toString(), track.title],
+        );
+        final link = await txn.query(
+          'music_links',
+          columns: ['id'],
+          where: 'url=?',
+          whereArgs: [track.link.uri.toString()],
+        );
+        await txn.insert('playlist_links', {
+          'playlist_id': id,
+          'link_id': link.single['id'],
+          'position': i,
+        });
+      }
+      return id;
+    });
+  }
+
+  Future<void> removePlaylistLink(int playlistId, int position) => db.delete(
+    'playlist_links',
+    where: 'playlist_id=? AND position=?',
+    whereArgs: [playlistId, position],
+  );
 
   static Future<void> _linkTable(DatabaseExecutor db) => db.execute('''
     CREATE TABLE music_links(id INTEGER PRIMARY KEY, url TEXT NOT NULL UNIQUE,
@@ -173,17 +250,18 @@ class LibraryStore {
     String filePath,
     String fallbackTitle,
   ) async {
-    await importPaths([filePath]);
+    final path = p.normalize(p.absolute(filePath));
+    await importPaths([path]);
     await db.transaction((txn) async {
       await txn.update(
         'tracks',
         {'title': fallbackTitle},
         where: 'path=? AND title=?',
-        whereArgs: [filePath, p.basenameWithoutExtension(filePath)],
+        whereArgs: [path, p.basenameWithoutExtension(path)],
       );
       await txn.update(
         'music_links',
-        {'download_path': filePath},
+        {'download_path': path},
         where: 'id=?',
         whereArgs: [linkId],
       );
@@ -292,7 +370,8 @@ class LibraryStore {
   )).map(Track.fromMap).toList();
   Future<List<Playlist>> playlists() async =>
       (await db.rawQuery(
-            '''SELECT p.id,p.name,COUNT(pt.track_id) AS count
+            '''SELECT p.id,p.name,p.source_url,COUNT(pt.track_id)+(SELECT COUNT(*) FROM playlist_links pl WHERE pl.playlist_id=p.id) AS count,
+      (SELECT COUNT(*) FROM playlist_links pl WHERE pl.playlist_id=p.id) AS link_count
       FROM playlists p LEFT JOIN playlist_tracks pt ON p.id=pt.playlist_id GROUP BY p.id ORDER BY p.id DESC''',
           ))
           .map(
@@ -300,6 +379,8 @@ class LibraryStore {
               m['id'] as int,
               m['name'] as String,
               m['count'] as int,
+              linkCount: m['link_count'] as int,
+              sourceUrl: m['source_url'] as String?,
             ),
           )
           .toList();
