@@ -233,3 +233,8 @@ tracks/playlists/playlist_tracks/history/settings/music_links совпали д�
 Ручной снимок и автоматический before-v4 сохранены; папка WebPlayer остаётся на месте.
 Новый автоматический вход реального аккаунта после обновления не проверялся кодом.
 Артефакты: upgrade-0.4.0.log/json и upgrade-0.4.0-data-after.json.
+
+Публикация завершена: source tag v0.4.0 = 2986d26, release latest. Публичный EXE
+повторно получен без авторизации: 14626421 bytes, SHA-256 совпал; отдельный checksum
+совпал, /releases/latest перенаправляет на v0.4.0. Первый POST GitHub API вернул
+временный HTTP 500, повтор прошёл. Артефакт release-0.4.0-public.json.
