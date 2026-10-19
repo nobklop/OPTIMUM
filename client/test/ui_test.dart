@@ -59,6 +59,17 @@ void main() {
             ).writeAsBytes(bytes!.buffer.asUint8List());
             image.dispose();
           });
+          await tester.tap(
+            size.width >= 900
+                ? find.text('Аккаунты сервисов').first
+                : find.byTooltip('Аккаунты сервисов'),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text('Яндекс Музыка'), findsOneWidget);
+          expect(find.text('SoundCloud'), findsOneWidget);
+          expect(find.text('Spotify'), findsOneWidget);
+          await tester.pageBack();
+          await tester.pumpAndSettle();
           await tester.tap(find.text('Библиотека').first);
           await tester.pumpAndSettle();
           expect(find.text('Ваша библиотека'), findsOneWidget);

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'music_link.dart';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -95,13 +96,14 @@ class LibraryStore {
     }
     final db = await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys=ON');
-        if (await db.getVersion() == 1 && path != ':memory:') {
+        final oldVersion = await db.getVersion();
+        if (oldVersion > 0 && oldVersion < 3 && path != ':memory:') {
           // A consistent SQLite snapshot, even if another app instance is open.
           await db.execute('VACUUM INTO ?', [
-            '$path.before-v2-${DateTime.now().toUtc().microsecondsSinceEpoch}.db',
+            '$path.before-v3-${DateTime.now().toUtc().microsecondsSinceEpoch}.db',
           ]);
         }
       },
@@ -126,15 +128,66 @@ class LibraryStore {
           'CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
         );
         await _playlistKeys(db);
+        await _linkTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE playlists ADD COLUMN backup_key TEXT');
           await _playlistKeys(db);
         }
+        if (oldVersion < 3) await _linkTable(db);
       },
     );
     return LibraryStore(db);
+  }
+
+  static Future<void> _linkTable(DatabaseExecutor db) => db.execute('''
+    CREATE TABLE music_links(id INTEGER PRIMARY KEY, url TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL, download_path TEXT REFERENCES tracks(path) ON DELETE SET NULL,
+    added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)''');
+
+  Future<List<SavedMusicLink>> links() async => (await db.query(
+    'music_links',
+    orderBy: 'id DESC',
+  )).map(SavedMusicLink.fromMap).toList();
+
+  Future<void> saveLink(MusicLink link, String title) async {
+    final label = title.trim().isEmpty
+        ? '${link.provider} · ${link.description}'
+        : title.trim();
+    if (label.length > 160 || label.contains('\u0000')) {
+      throw const FormatException('Название должно быть короче 160 символов');
+    }
+    await db.rawInsert(
+      'INSERT OR IGNORE INTO music_links(url,title) VALUES(?,?)',
+      [link.uri.toString(), label],
+    );
+  }
+
+  Future<void> removeLink(int id) async {
+    await db.delete('music_links', where: 'id=?', whereArgs: [id]);
+  }
+
+  Future<void> linkDownload(
+    int linkId,
+    String filePath,
+    String fallbackTitle,
+  ) async {
+    await importPaths([filePath]);
+    await db.transaction((txn) async {
+      await txn.update(
+        'tracks',
+        {'title': fallbackTitle},
+        where: 'path=? AND title=?',
+        whereArgs: [filePath, p.basenameWithoutExtension(filePath)],
+      );
+      await txn.update(
+        'music_links',
+        {'download_path': filePath},
+        where: 'id=?',
+        whereArgs: [linkId],
+      );
+    });
   }
 
   static Future<void> _playlistKeys(DatabaseExecutor db) async {

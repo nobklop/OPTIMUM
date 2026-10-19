@@ -1,4 +1,4 @@
-param([string]$Version = '0.2.2')
+param([string]$Version = '0.3.0')
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $sourcePath = Join-Path $projectRoot 'client\build\windows\x64\runner\Release'

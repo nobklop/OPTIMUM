@@ -121,3 +121,55 @@ os error 3`, включая попытку reset/retry. Ручная автом�
   целевую частоту кадров или мобильное энергопотребление на основе desktop теста.
 - Signing отсутствует. Для libmpv полный corresponding source audit ещё не закрыт:
   публичные установщики получают движок из upstream, локальные ZIP не публикуются.
+
+## 0.3.0 — ссылки и аккаунты сервисов (20 октября 2026)
+
+- Analyzer: no issues. 17 unit/widget passed; после изменения cleanup отдельно
+  повторены 5 link/download tests. Layout 1440×960 и 390×844 включает аккаунты.
+- SQLite v1→v3/v2→v3: снимок до миграции, сохранность данных, rollback при ошибке.
+  JSON v2: ссылки и download paths, идемпотентный merge, v1 backward input.
+  Удаление локального трека очищает download_path через FK; файл не удаляется.
+- Windows native music_links_test passed: UI сохранения, остановка libmpv перед WebView,
+  все три настоящих embeds, HTML audio play/pause/time/duration. Авторский WAV
+  скачан по реальной HTTPS-ссылке (1344044 bytes), байты совпали; сохранённый файл
+  декодирован libmpv с растущей позицией около 2 секунд без URL в источнике плеера.
+- Нажаты реальные элементы play в плеерах: Spotify video-preview 29.552 s,
+  time 0.480 s/paused=false; SoundCloud 213.886 s, time 2.950 s/paused=false;
+  Яндекс preview 30.041 s, time 1.730 s/paused=false. Ошибок media element не было.
+  Это проверка старта публичных примеров без входа, не полный каталог/дослушивание.
+- Windows native service_accounts_test passed, повторён после обработки отменённой
+  навигации: официальные страницы сервиса/входа открылись; Яндекс — телефон/QR,
+  Spotify — email, SoundCloud — sign-in и стандартный cookie prompt. Подтверждение
+  cookies/2FA и реальные аккаунты не использовались; пароли не запрашивались.
+  Тестовый профиль отдельный .data/account-test-*; только на своём HTTPS virtual
+  host проверены cookie/localStorage после уничтожения и повторного создания окна.
+  Автологин реального аккаунта после полного перезапуска ещё не проверен.
+- Windows native windows_player_test passed повторно: прежнее декодирование, пауза,
+  seek, очередь/повтор/конец/история, ошибки и настройки. Codec matrix ранее passed,
+  адаптер и декодер в этом этапе не изменялись. Backend: 17 passed, ruff clean.
+- Реальные кадры: windows-music-links.png, windows-service-{spotify,soundcloud,yandex}.png,
+  windows-direct-download.png, windows-service-accounts.png, windows-login-*.png.
+  Результаты: music-links-native-results.json и service-accounts-native-results.json.
+
+Ограничения: API-ключей нет; страницы сервисов сохраняют их политику входа/страны/
+подписки. Google/Apple login и защищённое full playback во WebView могут быть недоступны.
+Локальная база не получает состав сервисных плейлистов/лайки. Скачивание доступно для
+прямых HTTPS-аудиофайлов; обычные Spotify/Яндекс/SoundCloud permalink не являются MP3.
+Windows 11/WebView2 проверены; мобильный модуль не проверен. Runtime не включён в EXE.
+
+Release 0.3.0+6 собран Windows x64. Installer: 14602173 bytes, SHA-256
+`0ac1c58bdcabf26d98f0310ad46f5379947acef6e8ff09f014b9b44adc488a49`.
+Локальный portable ZIP SHA-256:
+`fda7e0ee172a5d4aec0a8e6d5ae2ab0b226ac0ec5eb38c8d636f3112777a6548`;
+он не публикуется из-за прежнего corresponding-source audit libmpv.
+
+Проверено реальное обновление установленного приложения 0.2.2→0.3.0 в
+D:\OptimumTools\OPTIMUM-app: все 35 payload files по SHA-256, отдельный engine hash,
+регистрация uninstall 0.3.0, запущенный процесс отвечает. SQLite v2→v3, integrity=ok;
+количества и SHA-256 всех прежних строк библиотеки совпали до/после. Есть ручной
+снимок до установки и автоматический before-v3. Проверка через 3 секунды сначала
+опередила холодный старт: миграция завершилась примерно через 6 секунд, повторная
+проверка состояния прошла. Это не выдаётся за сбой миграции или мгновенный запуск.
+Артефакты: upgrade-0.3.0.log/json и upgrade-0.3.0-data-after.json.
+Яндекс collection URL дополнительно проверен публичным HTTP: /collection вернул 200,
+/home перенаправлял на корень, поэтому кнопка использует /collection.

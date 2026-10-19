@@ -1,12 +1,28 @@
 # Состояние разработки
 
-Текущий checkpoint: **0.2.2**, source tag `af86a77`, опубликован на GitHub и latest.
-Установлена и открыта `D:\OptimumTools\OPTIMUM-app\optimum.exe` (0.2.2+5),
-есть ярлык; процесс отвечал. Все пять версий имеют проверенные EXE installers.
-12 Flutter tests, analyzer, native Windows audio/UI passed; profile pacing исправлен.
-Публичный 0.2.2 installer скачан обратно и совпал с локальным SHA-256, latest проверен.
-Итог для пользователя: docs/INTERIM_REPORT.ru.md. Следующий модуль — LINK_IMPORT.ru.md;
-API-доступ SoundCloud/Artist Pro уточнён, ответ пока не получен. Импорта ссылок ещё нет.
+Текущий этап: **0.3.0 готов к публикации**. Пользователь выбрал обычные ссылки
+без API-ключей и вход/библиотеку сервисов внутри OPTIMUM, без автоматического переноса
+плейлистов/лайков в локальную базу. SQLite v3 + before-v3, JSON v2 (читает v1),
+ссылки/короткие URL/прямые HTTPS downloads, WebView2 player и аккаунты сервисов
+с постоянным WebPlayer profile. pubspec 0.3.0+6.
+
+Analyzer no issues; 17 unit/widget passed, 5 link/download tests повторены после cleanup.
+Native links/audio/download passed; account pages и синтетическая сессия passed,
+повторены после исправления ложной ошибки отменённой навигации. Реальные пароли не
+вводились; настоящий вход/2FA и автологин после restart остаются пользовательской проверкой.
+Spotify preview ~29.55 s, Яндекс preview ~30.04 s, SoundCloud поток ~213.89 s;
+полный доступ к каталогу не обещается. Native local player regression passed;
+backend 17 passed и ruff. Яндекс /collection проверен HTTP 200; /home редиректил на root.
+
+Release/installer собраны. Установлена и открыта D:\OptimumTools\OPTIMUM-app\optimum.exe
+0.3.0+6 (PID 15488), 35 payload hashes, engine hash и регистрация совпали.
+SQLite v2→v3: integrity ok, количества и digest всех прежних строк сохранены,
+ручной/автоматический snapshots есть. Первый 3 s smoke check был раньше холодного
+старта; база обновилась через ~6 s, итоговая проверка passed. Артефакты upgrade-0.3.0*.
+Installer SHA-256 0ac1c58bdcabf26d98f0310ad46f5379947acef6e8ff09f014b9b44adc488a49.
+Осталось: Git commit/tag/push, GitHub release с EXE/SHA256, публичная download/hash
+проверка и итоговый docs checkpoint. Последний опубликованный latest пока 0.2.2.
+Итог пользователя: docs/INTERIM_REPORT.ru.md. Нативные кадры — artifacts/.
 
 Задание: `PRODUCT_BRIEF.ru.md`. Текущая граница — первый рабочий локальный Windows-прототип.
 Полный продукт разрабатывается по ROADMAP, не объявляется готовым на этапе основы.

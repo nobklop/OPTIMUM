@@ -37,6 +37,12 @@ Copy-Item -LiteralPath (Join-Path $FlutterSdk 'bin\cache\pkg\sky_engine\LICENSE'
 Copy-Item -LiteralPath (Join-Path $projectRoot 'client\assets\fonts\OFL.txt') -Destination (Join-Path $noticePath 'Manrope-OFL.txt')
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\INSTALLER.ru.md') -Destination (Join-Path $stagePath 'INSTALLATION.ru.md')
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\NATIVE_NOTICES.md') -Destination (Join-Path $noticePath 'NATIVE_NOTICES.md')
+if (Test-Path -LiteralPath (Join-Path $packagePath 'webview_windows_plugin.dll')) {
+  $nativePackages = Join-Path $projectRoot 'client\build\windows\x64\packages'
+  Copy-Item -LiteralPath (Join-Path $nativePackages 'Microsoft.Web.WebView2\LICENSE.txt') -Destination (Join-Path $noticePath 'WebView2-loader-LICENSE.txt')
+  Copy-Item -LiteralPath (Join-Path $nativePackages 'Microsoft.Windows.ImplementationLibrary\LICENSE') -Destination (Join-Path $noticePath 'WIL-LICENSE.txt')
+  Copy-Item -LiteralPath (Join-Path $nativePackages 'Microsoft.Windows.ImplementationLibrary\ThirdPartyNotices.txt') -Destination (Join-Path $noticePath 'WIL-ThirdPartyNotices.txt')
+}
 if (Test-Path -LiteralPath (Join-Path $stagePath 'libmpv-2.dll')) { throw 'External engine must not be bundled' }
 & $Compiler "/DAppVersion=$Version" "/DSourceDir=$stagePath" "/DOutputPath=$outputPath" (Join-Path $projectRoot 'packaging\windows\optimum.iss')
 if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }

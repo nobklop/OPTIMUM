@@ -13,6 +13,15 @@ user's installer from the upstream provider, with a pinned archive and DLL hash.
 - Manrope font: SIL Open Font License, Manrope-OFL.txt.
 - SQLite: public domain, https://sqlite.org/copyright.html and https://sqlite.org/src/
 - media-kit / Windows plugin: MIT, https://github.com/media-kit/media-kit
+- webview_windows 0.4.0: BSD-3-Clause, package notice in NOTICES.Z,
+  https://github.com/jnschulze/flutter-webview-windows
+- Microsoft WebView2 SDK 1.0.1210.39 loader: BSD-3-Clause,
+  WebView2-loader-LICENSE.txt. The browser runtime is installed separately and
+  serviced by Microsoft; it is not bundled with OPTIMUM.
+- Windows Implementation Library 1.0.220914.1: MIT, WIL-LICENSE.txt and
+  WIL-ThirdPartyNotices.txt, https://github.com/microsoft/wil
+- url_launcher 6.3.3 / Windows 3.1.6: BSD-3-Clause, Flutter package notices,
+  https://github.com/flutter/packages/tree/main/packages/url_launcher
 - Microsoft Visual C++ 14.44 CRT: unmodified signed Microsoft redistributable
   DLLs from the installed Visual Studio Build Tools redist directory. App-local
   deployment: https://learn.microsoft.com/cpp/windows/walkthrough-deploying-a-visual-cpp-application-to-an-application-local-folder

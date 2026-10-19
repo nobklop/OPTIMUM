@@ -4,6 +4,8 @@ import '../data/library.dart';
 import '../playback/model.dart';
 import '../playback/queue.dart';
 import 'cosmos.dart';
+import 'music_links.dart';
+import 'service_accounts.dart';
 
 String timeLabel(Duration d) =>
     '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
@@ -266,7 +268,7 @@ class _WorkspaceState extends State<Workspace> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Версия 0.2 · личная библиотека',
+          'Версия 0.3 · музыка по ссылке',
           style: TextStyle(fontSize: 10, color: muted),
         ),
       ],
@@ -297,15 +299,19 @@ class _WorkspaceState extends State<Workspace> {
             style: const TextStyle(fontSize: 13),
           ),
         ),
-        if (wide) ...[
-          const SizedBox(width: 28),
-          const Icon(Icons.person_outline, size: 20, color: muted),
-          const SizedBox(width: 9),
-          const Text(
-            'Локальный профиль',
-            style: TextStyle(fontSize: 12, color: muted),
+        const SizedBox(width: 12),
+        if (wide)
+          TextButton.icon(
+            onPressed: () => showServiceAccounts(context, model, player),
+            icon: const Icon(Icons.person_outline, size: 20),
+            label: const Text('Аккаунты сервисов'),
+          )
+        else
+          IconButton(
+            tooltip: 'Аккаунты сервисов',
+            onPressed: () => showServiceAccounts(context, model, player),
+            icon: const Icon(Icons.person_outline, size: 22),
           ),
-        ],
       ],
     ),
   );
@@ -416,6 +422,13 @@ class _WorkspaceState extends State<Workspace> {
                           onPressed: model.busy ? null : model.importFiles,
                           icon: const Icon(Icons.add, size: 18),
                           label: const Text('Добавить музыку'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: model.busy
+                              ? null
+                              : () => importMusicLink(context, model, player),
+                          icon: const Icon(Icons.link, size: 18),
+                          label: const Text('По ссылке'),
                         ),
                         OutlinedButton(
                           onPressed: model.busy
@@ -615,7 +628,9 @@ class _WorkspaceState extends State<Workspace> {
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
             child: _section(
               playlist?.name ?? 'Ваша библиотека',
-              '${tracks.length} треков · музыка хранится на вашем устройстве',
+              filter == 3 && selectedPlaylist == null
+                  ? '${model.links.length} ссылок · плееры сервисов внутри OPTIMUM'
+                  : '${tracks.length} треков · музыка хранится на вашем устройстве',
             ),
           ),
           Padding(
@@ -626,13 +641,22 @@ class _WorkspaceState extends State<Workspace> {
               children: [
                 if (selectedPlaylist == null)
                   ...List.generate(
-                    3,
+                    4,
                     (i) => ChoiceChip(
-                      label: Text(['Все треки', 'Избранное', 'История'][i]),
+                      label: Text(
+                        ['Все треки', 'Избранное', 'История', 'По ссылке'][i],
+                      ),
                       selected: filter == i,
                       onSelected: (_) => setState(() => filter = i),
                     ),
                   ),
+                OutlinedButton.icon(
+                  onPressed: model.busy
+                      ? null
+                      : () => importMusicLink(context, model, player),
+                  icon: const Icon(Icons.link, size: 17),
+                  label: const Text('Добавить ссылку'),
+                ),
                 OutlinedButton.icon(
                   onPressed: model.busy ? null : model.importFiles,
                   icon: const Icon(Icons.add, size: 17),
@@ -643,7 +667,8 @@ class _WorkspaceState extends State<Workspace> {
                   icon: const Icon(Icons.folder_open, size: 17),
                   label: const Text('Папка'),
                 ),
-                if (tracks.isNotEmpty)
+                if (tracks.isNotEmpty &&
+                    (filter != 3 || selectedPlaylist != null))
                   FilledButton.icon(
                     onPressed: () => player.select(tracks, 0),
                     icon: const Icon(Icons.play_arrow, size: 18),
@@ -654,7 +679,9 @@ class _WorkspaceState extends State<Workspace> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: tracks.isEmpty
+            child: filter == 3 && selectedPlaylist == null
+                ? MusicLinksView(model: model, player: player, search: search)
+                : tracks.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
@@ -952,6 +979,19 @@ class _WorkspaceState extends State<Workspace> {
   Widget _settings() => _scroll([
     _section('Настройки', 'Ваше пространство должно быть комфортным.'),
     Surface(
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: const Icon(Icons.account_circle_outlined),
+        title: const Text('Аккаунты сервисов'),
+        subtitle: const Text(
+          'Вход и библиотека Яндекс Музыки, SoundCloud и Spotify',
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => showServiceAccounts(context, model, player),
+      ),
+    ),
+    const SizedBox(height: 18),
+    Surface(
       child: Column(
         children: [
           SwitchListTile(
@@ -988,7 +1028,7 @@ class _WorkspaceState extends State<Workspace> {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Сохраните плейлисты, избранное, историю и настройку движения в JSON. Аудиофайлы в копию не входят и должны оставаться по прежним путям.',
+            'Сохраните плейлисты, ссылки, избранное, историю и настройку движения в JSON. Аудиофайлы в копию не входят и должны оставаться по прежним путям.',
             style: TextStyle(color: muted),
           ),
           const SizedBox(height: 12),
@@ -1029,19 +1069,19 @@ class _WorkspaceState extends State<Workspace> {
           ),
           const SizedBox(height: 18),
           const Text(
-            'OPTIMUM 0.2.2 · локальный Windows-прототип',
+            'OPTIMUM 0.3.0 · Windows-прототип',
             style: TextStyle(color: muted, fontSize: 12),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Фоновое мобильное воспроизведение, аккаунты, рекомендации и интеграции ещё не реализованы.',
+            'Ссылки открываются в плеерах сервисов. Фоновое мобильное воспроизведение, облачные аккаунты и рекомендации ещё не реализованы.',
             style: TextStyle(color: muted, fontSize: 12),
           ),
           TextButton(
             onPressed: () => showLicensePage(
               context: context,
               applicationName: 'OPTIMUM',
-              applicationVersion: '0.2.2',
+              applicationVersion: '0.3.0',
             ),
             child: const Text('Лицензии компонентов'),
           ),

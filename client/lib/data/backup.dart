@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:path/path.dart' as p;
 import 'library.dart';
+import 'music_link.dart';
 
 /// Versioned, metadata-only snapshots. Restore merges atomically and never deletes music.
 class LibraryBackup {
@@ -38,7 +39,12 @@ class LibraryBackup {
     );
     final content = const JsonEncoder.withIndent('  ').convert({
       'format': 'optimum-library',
-      'version': 1,
+      'version': 2,
+      'links': (await txn.query(
+        'music_links',
+        columns: ['url', 'title', 'download_path'],
+        orderBy: 'id',
+      )),
       'created_at': DateTime.now().toUtc().toIso8601String(),
       'tracks': tracks
           .map(
@@ -149,6 +155,18 @@ class LibraryBackup {
           [entry.key, entry.value],
         );
       }
+      for (final link in snapshot.links) {
+        await txn.rawInsert(
+          'INSERT OR IGNORE INTO music_links(url,title,download_path) VALUES(?,?,?)',
+          [link['url'], link['title'], link['download_path']],
+        );
+        if (link['download_path'] != null) {
+          await txn.rawUpdate(
+            'UPDATE music_links SET download_path=? WHERE url=? AND download_path IS NULL',
+            [link['download_path'], link['url']],
+          );
+        }
+      }
       return BackupResult(added, restoredPlaylists);
     });
   }
@@ -160,7 +178,7 @@ class LibraryBackup {
     final root = jsonDecode(content);
     if (root is! Map<String, dynamic> ||
         root['format'] != 'optimum-library' ||
-        root['version'] != 1) {
+        ![1, 2].contains(root['version'])) {
       throw const FormatException(
         'Неизвестный формат или версия резервной копии',
       );
@@ -184,6 +202,24 @@ class LibraryBackup {
     }
 
     final paths = <String>{};
+    final links = <Map<String, Object?>>[];
+    if (root['version'] == 2) {
+      final seen = <String>{};
+      for (final row in rows('links', 10000)) {
+        if (row is! Map) throw const FormatException('Некорректная ссылка');
+        final link = MusicLink.parse(text(row['url'], 'link.url', 4096));
+        if (!seen.add(link.uri.toString())) {
+          throw const FormatException('Повторная ссылка');
+        }
+        links.add({
+          'url': link.uri.toString(),
+          'title': text(row['title'], 'link.title', 160),
+          'download_path': row['download_path'] == null
+              ? null
+              : text(row['download_path'], 'link.download_path', 4096),
+        });
+      }
+    }
     final tracks = <Map<String, Object?>>[];
     for (final row in rows('tracks', 50000)) {
       if (row is! Map) throw const FormatException('Некорректный трек');
@@ -209,6 +245,14 @@ class LibraryBackup {
         'duration_ms': row['duration_ms'],
         'liked': row['liked'],
       });
+    }
+    for (final link in links) {
+      if (link['download_path'] != null &&
+          !paths.contains(link['download_path'])) {
+        throw const FormatException(
+          'Сохранённая ссылка ссылается на отсутствующий локальный трек',
+        );
+      }
     }
     final keys = <String>{};
     final playlists = <Map<String, Object?>>[];
@@ -259,6 +303,7 @@ class LibraryBackup {
       playlists,
       history,
       settings.cast<String, String>(),
+      links,
     );
   }
 }
@@ -269,7 +314,13 @@ class BackupResult {
 }
 
 class _Snapshot {
-  final List<Map<String, Object?>> tracks, playlists, history;
+  final List<Map<String, Object?>> tracks, playlists, history, links;
   final Map<String, String> settings;
-  const _Snapshot(this.tracks, this.playlists, this.history, this.settings);
+  const _Snapshot(
+    this.tracks,
+    this.playlists,
+    this.history,
+    this.settings,
+    this.links,
+  );
 }

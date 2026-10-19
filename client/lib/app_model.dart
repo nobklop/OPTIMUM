@@ -6,11 +6,13 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'data/library.dart';
 import 'data/backup.dart';
+import 'data/music_link.dart';
 
 class AppModel extends ChangeNotifier {
   final LibraryStore store;
   List<Track> tracks = [], recent = [];
   List<Playlist> playlists = [];
+  List<SavedMusicLink> links = [];
   bool busy = false, reduceMotion = false;
   String? message;
   bool _disposed = false;
@@ -44,6 +46,8 @@ class AppModel extends ChangeNotifier {
     playlists = await store.playlists();
     if (_disposed) return;
     recent = await store.recent();
+    if (_disposed) return;
+    links = await store.links();
     if (_disposed) return;
     reduceMotion = await store.setting('reduce_motion') == 'true';
     _notify();

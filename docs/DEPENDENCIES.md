@@ -29,6 +29,12 @@ sqflite / sqflite_common_ffi / path_provider — локальная инфрас
 Manrope — SIL Open Font License, полный текст `client/assets/fonts/OFL.txt`.
 Проверены реальные downloaded package sources при настройке API.
 
+В 0.3: webview_windows 0.4.0 (BSD-3-Clause), url_launcher 6.3.3 и Windows adapter
+3.1.6 (BSD-3-Clause). WebView2 SDK loader 1.0.1210.39 и WIL 1.0.220914.1
+получаются из NuGet при сборке; лицензии/third-party notices входят в установщик.
+Browser runtime не включён: используется установленный Microsoft Edge WebView2.
+Официальные embed-плееры не требуют ключей приложения; условия сервиса сохраняются.
+
 Adapter `just_audio_media_kit` закреплён локально как 2.1.0+optimum.1 в third_party/.
 Обнаруженные на Windows ошибки `osc` и disk cache исправлены точечно, без изменения
 Pub cache. Изменения и исходная лицензия сохранены рядом с кодом в OPTIMUM_PATCH.md.

@@ -185,13 +185,13 @@ void main() {
       await old.close();
       final migrated = await LibraryStore.open(databasePath: path);
       try {
-        expect(await migrated.db.getVersion(), 2);
+        expect(await migrated.db.getVersion(), 3);
         expect((await migrated.tracks()).single.title, 'До обновления');
         expect((await migrated.tracks()).single.liked, true);
         expect((await migrated.playlists()).single.count, 1);
         expect((await migrated.recent()).single.title, 'До обновления');
         final before = (await folder.list().toList())
-            .where((f) => f.path.contains('.before-v2-'))
+            .where((f) => f.path.contains('.before-v3-'))
             .single;
         final snapshot = await openDatabase(before.path, readOnly: true);
         try {
