@@ -1,0 +1,33 @@
+name: optimum
+description: OPTIMUM — личное музыкальное пространство.
+publish_to: none
+version: 0.1.0+1
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  just_audio: 0.10.6
+  just_audio_media_kit:
+    path: ../third_party/just_audio_media_kit
+  media_kit_libs_windows_audio: 1.0.9
+  file_picker: 13.1.0
+  sqflite: 2.4.4+2
+  sqflite_common_ffi: 2.4.4
+  path_provider: 2.1.6
+  path: 1.9.1
+  audio_metadata_reader: 1.8.1
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope.ttf
+  assets:
+    - assets/audio/
