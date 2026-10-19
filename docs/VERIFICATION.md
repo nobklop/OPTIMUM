@@ -1,4 +1,4 @@
-# Проверки первой версии — 19 октября 2026
+# Проверки OPTIMUM — 19 октября 2026
 
 ## Среда
 
@@ -14,9 +14,9 @@ Windows Developer Mode включён пользователем. Python 3.12.14
 | Backend pytest | 17 passed: серверное время, play/pause/seek/next, rejoin, concurrency, retry, права, transfer, leave, votes, validation, HTTP ASGI |
 | Backend ruff | All checks passed |
 | Flutter analyzer | No issues found |
-| Flutter unit/widget | 11 passed: прежние 8 проверок и 3 проверки JSON backup/restore, transaction rollback, миграции v1→v2 с целостной копией |
+| Flutter unit/widget | 12 passed для 0.2.2: прежние 11 и проверка каждого кадра clock, inactive/reduced motion |
 | Цикл Cosmic | Реальные Flutter кадры t=0 и t=90 совпадают; порог: менее 0.001% цветовых каналов отличаются более чем на 1/255 |
-| Windows native integration | 1 passed повторно для 0.2.0: настоящий libmpv, WAV decode/duration, pause, seek, next/previous в паузе, repeat-one, auto-next, конец очереди, история после 10 секунд, missing-file/retry, новые настройки |
+| Windows native integration | 1 passed повторно для 0.2.2: настоящий libmpv, WAV decode/duration, pause, seek, next/previous в паузе, repeat-one, auto-next, конец очереди, история после 10 секунд, missing-file/retry, настройки |
 | Windows codec matrix | 1 passed: WAV/MP3/FLAC/OGG/M4A (AAC), русские пути, теги, duration/play/pause/seek; повреждённый WAV даёт ошибку, затем валидный MP3 играет |
 | Анимация native UI | В активном lifecycle последовательные кадры отличаются; reduced motion даёт одинаковые кадры через секунду. В 0.2 тест явно задаёт resumed, чтобы переключение на редактор/GitHub не замораживало проверку |
 | Windows release | Нативная x64 release-сборка, не web/PWA |
@@ -46,9 +46,26 @@ Uninstall exit 0; программа/регистрация удалены, по
 исправлен тестовый путь на настоящий workspace; защиту установщика не отключали.
 После добавления полных Flutter engine notices пакеты пересобраны и проверены снова.
 
-Сообщение пользователя о дёргании анимации зафиксировано. Нынешний фон ограничен
-30 Гц; окончательная проверка равномерности кадров отложена на заключительный этап
-по просьбе пользователя. Целевая плавность не объявляется доказанной этими снимками.
+В 0.2.1 пользователь сообщил о дёргании анимации и попросил исправить на заключительном
+этапе. Исправление и профильные замеры выполнены в 0.2.2, см. ниже.
+
+## 0.2.2: равномерность движения
+
+Analyzer — no issues; полный набор Flutter tests — 12 passed. Profile benchmark
+настоящего Windows UI без пользовательской базы: motion 30.06→69.12 Гц,
+интервал p95 45.002→20.001 мс; raster p95 15.862→15.437 мс, build p95 1.175→1.240 мс.
+По 6 секунд после 2 секунд прогрева, lifecycle явно active; это локальный замер,
+не обещание FPS для всех устройств. Подробности и воспроизведение — PERFORMANCE.md.
+Кэш туманностей, 90-секундный период, inactive и reduced motion сохранены.
+Windows native audio/UI test повторно прошёл после изменения clock; release 0.2.2+5
+собран. Installer: чистая установка 0.2.1 → обновление 0.2.2, все payload hashes,
+downgrade guard, запуск и uninstall с сохранением библиотеки прошли.
+Portable ZIP SHA-256: `97ff487c8b846b5a04ce689905b29146a9056986b13388a444fffff1364298ab`.
+Installer SHA-256: `7bac31ba3cdf2081d7e41aaa5914bf269d4f382c0966379bcc1c77e5589bf7c9`.
+При обычном запуске Inno показывает одну кнопку «Установить», даже когда страницы
+welcome/dir/ready отключены: fallback описан в официальном DisableReadyPage.
+Это проверено настоящим обычным запуском; описания уточнены. После правки текста
+INSTALLATION новый 0.2.2 installer пересобран и ещё раз проверен install/launch/uninstall.
 
 ## Пакет 0.1.1 (сохранён)
 

@@ -21,7 +21,6 @@ class _CosmosState extends State<Cosmos>
   bool _active = true;
   final pointer = ValueNotifier<Offset>(Offset.zero);
   final frameClock = ValueNotifier<double>(0);
-  int _frame = -1;
   late final AnimationController animation = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 90),
@@ -33,11 +32,7 @@ class _CosmosState extends State<Cosmos>
     _active = lifecycle == null || lifecycle == AppLifecycleState.resumed;
     WidgetsBinding.instance.addObserver(this);
     animation.addListener(() {
-      final frame = (animation.value * 90 * 30).floor();
-      if (frame != _frame) {
-        _frame = frame;
-        frameClock.value = animation.value;
-      }
+      frameClock.value = animation.value;
     });
     if (!widget.reduced && _active) animation.repeat();
   }

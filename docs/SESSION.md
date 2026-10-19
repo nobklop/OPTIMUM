@@ -91,3 +91,33 @@ setup из-за незакрытого corresponding-source audit. Полные 
 Пользователь снова сообщил о рывках анимации и попросил исправить именно под конец
 лимитов: после текущего этапа измерить frame pacing, снять 30Hz cap при необходимости,
 проверить плавность и бесшовность перед финальной промежуточной сборкой.
+
+## Заключительный этап 0.2.2
+
+0.2.1 commit 9c472b5 опубликован main/tag. Публичные releases 0.1.0, 0.1.1,
+0.2.0, 0.2.1 созданы с EXE-установщиками и SHA-256; digest каждого asset проверен.
+0.2.1 дополнительно скачан с публичной прямой ссылки: SHA совпал. Кнопка README
+и кнопки в notes у каждой версии ведут на реальный installer.
+
+Сняты настоящие profile benchmark до/после: 180→414 motion ticks за 6 секунд,
+30.0576→69.1186 Гц, p95 интервал 45.002→20.001 мс. GPU raster p95 не ухудшился:
+15.862→15.437 мс. Удалён floor(time*30) из Cosmos; обновления каждый vsync.
+Новый тест: 120 последовательных кадров, inactive, reduced. Всего 12 tests passed;
+analyzer no issues. Benchmark tool в client/tool, использует только :memory: SQLite.
+Метрики в artifacts/cosmic-pacing-before/after.json, объяснение docs/PERFORMANCE.md.
+
+Новый главный link-import сценарий записан в docs/LINK_IMPORT.ru.md с точными
+проверенными API-границами. SoundCloud OpenAPI помечает stream_url deprecated/
+preview-only; использовать /tracks/{urn}/streams. Регистрация API требует Artist Pro,
+вопрос пользователю задан, ответ пока не получен. Live интеграции нет, не заявлять её.
+Далее завершить native test/release 0.2.2, portable+installer, проверку обновления,
+публикацию и установку финальной промежуточной версии на D: с отчётом.
+Native Windows test прошёл после raw-vsync, release 0.2.2+5 и portable ZIP собраны.
+Новый installer проверен upgrade 0.2.1→0.2.2, hash match, downgrade blocked,
+installed launch, uninstall/library preservation. SHA-256 в VERIFICATION.md.
+Подробный пользовательский отчёт: docs/INTERIM_REPORT.ru.md.
+Обычный setup оставляет одну кнопку «Установить» (официальный fallback DisableReadyPage),
+поэтому тексты исправлены на точный сценарий. Новый installer ещё раз пересобран и
+проверен, SHA теперь 7bac31ba3cdf2081d7e41aaa5914bf269d4f382c0966379bcc1c77e5589bf7c9.
+Итоговая 0.2.2 установлена через проверенный installer в D:\OptimumTools\OPTIMUM-app,
+запущена; библиотека остаётся в прежнем AppData. Не закрывать её без необходимости.

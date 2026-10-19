@@ -1,10 +1,10 @@
 # OPTIMUM
 
-Текущая версия: **0.2.1**. Локальный Windows-прототип.
+Текущая версия: **0.2.2**. Локальный Windows-прототип.
 
-[![Скачать и установить](docs/assets/install-windows.svg)](https://github.com/nobklop/OPTIMUM/releases/download/v0.2.1/OPTIMUM-0.2.1-Setup-x64.exe)
+[![Скачать и установить](docs/assets/install-windows.svg)](https://github.com/nobklop/OPTIMUM/releases/download/v0.2.2/OPTIMUM-0.2.2-Setup-x64.exe)
 
-Windows 10/11 x64: скачайте EXE и запустите. Установка и ярлык автоматические,
+Windows 10/11 x64: скачайте EXE, запустите и нажмите **Установить**. Дальше всё автоматически,
 без администратора, Flutter и Visual Studio. Первая установка требует интернета.
 Windows может попросить подтвердить запуск неподписанного приложения.
 [Все версии с установщиками](https://github.com/nobklop/OPTIMUM/releases).
@@ -33,6 +33,8 @@ Flutter + SQLite + just_audio, с отдельной основой FastAPI и T
 Together ещё не соединяет устройства. Аккаунты, облачная синхронизация, друзья,
 чат, рекомендации, загрузки из сервисов и фоновые альбомы — будущие этапы.
 Кнопки не имитируют эти функции. Готовность полного продукта не заявляется.
+Уточнённый главный сценарий импорта ссылок из сервисов: [LINK_IMPORT](docs/LINK_IMPORT.ru.md).
+Измерение и исправление плавности 0.2.2: [PERFORMANCE](docs/PERFORMANCE.md).
 
 ## Быстрый запуск Windows
 
