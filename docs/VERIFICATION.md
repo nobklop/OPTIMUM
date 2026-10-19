@@ -173,3 +173,8 @@ D:\OptimumTools\OPTIMUM-app: все 35 payload files по SHA-256, отдель�
 Артефакты: upgrade-0.3.0.log/json и upgrade-0.3.0-data-after.json.
 Яндекс collection URL дополнительно проверен публичным HTTP: /collection вернул 200,
 /home перенаправлял на корень, поэтому кнопка использует /collection.
+
+Публикация: tag v0.3.0 = 03819e8, latest. Публичный EXE повторно получен без
+авторизации, 14602173 bytes и SHA-256 совпали с локальным установщиком; опубликованный
+checksum совпал. /releases/latest ведёт на /releases/tag/v0.3.0.
+Артефакт release-0.3.0-public.json. Тег исходников не менялся после публикации.
