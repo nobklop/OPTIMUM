@@ -1,5 +1,13 @@
 # Состояние разработки
 
+Текущий checkpoint: **0.2.2**, source tag `af86a77`, опубликован на GitHub и latest.
+Установлена и открыта `D:\OptimumTools\OPTIMUM-app\optimum.exe` (0.2.2+5),
+есть ярлык; процесс отвечал. Все пять версий имеют проверенные EXE installers.
+12 Flutter tests, analyzer, native Windows audio/UI passed; profile pacing исправлен.
+Публичный 0.2.2 installer скачан обратно и совпал с локальным SHA-256, latest проверен.
+Итог для пользователя: docs/INTERIM_REPORT.ru.md. Следующий модуль — LINK_IMPORT.ru.md;
+API-доступ SoundCloud/Artist Pro уточнён, ответ пока не получен. Импорта ссылок ещё нет.
+
 Задание: `PRODUCT_BRIEF.ru.md`. Текущая граница — первый рабочий локальный Windows-прототип.
 Полный продукт разрабатывается по ROADMAP, не объявляется готовым на этапе основы.
 
@@ -121,3 +129,6 @@ installed launch, uninstall/library preservation. SHA-256 в VERIFICATION.md.
 проверен, SHA теперь 7bac31ba3cdf2081d7e41aaa5914bf269d4f382c0966379bcc1c77e5589bf7c9.
 Итоговая 0.2.2 установлена через проверенный installer в D:\OptimumTools\OPTIMUM-app,
 запущена; библиотека остаётся в прежнем AppData. Не закрывать её без необходимости.
+Публикация v0.2.2 завершена, все старые notes уточнены про кнопку «Установить».
+Public installer 14 403 171 байт, SHA-256 совпал; releases/latest ведёт на v0.2.2.
+Подтверждение: artifacts/release-0.2.2-public.json. Working tree сохранить чистым.

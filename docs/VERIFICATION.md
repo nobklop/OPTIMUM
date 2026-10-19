@@ -66,6 +66,9 @@ Installer SHA-256: `7bac31ba3cdf2081d7e41aaa5914bf269d4f382c0966379bcc1c77e5589b
 welcome/dir/ready отключены: fallback описан в официальном DisableReadyPage.
 Это проверено настоящим обычным запуском; описания уточнены. После правки текста
 INSTALLATION новый 0.2.2 installer пересобран и ещё раз проверен install/launch/uninstall.
+Финальная версия установлена в D:\OptimumTools\OPTIMUM-app, зарегистрирована 0.2.2,
+запущена и отвечает. Публичный EXE 14 403 171 байт скачан обратно, SHA совпал;
+releases/latest перенаправляет на v0.2.2. Все пять версий имеют EXE + SHA assets.
 
 ## Пакет 0.1.1 (сохранён)
 
